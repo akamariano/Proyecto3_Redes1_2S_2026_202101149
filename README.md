@@ -150,6 +150,22 @@ router ospf 1
 
 <!-- Pendiente (Mariano): capturas de show ip route en R-WAN, CORE-3 y R-CENTRAL1 donde se vean rutas O, O E2, D, D EX, R y S. -->
 
+### 4.7 Enlaces de integración entre el backbone y las sedes
+
+Cuatro enlaces unen el backbone con los equipos de borde de Occidente, Norte y Oriente. Cada integrante configura su extremo en su propio archivo, y los cables se conectan al fusionar las partes en `BanTech_GT.pkt`. Al conectarlos, cada enlace debe levantar sin cambios adicionales.
+
+| Enlace | Extremo backbone (Mariano) | Extremo de la sede | Responsable de la sede | Red | Protocolo en ambos extremos |
+|---|---|---|---|---|---|
+| CORE-2 a R-Norte | CORE-2 Gi1/0/2, 10.49.0.29 | R-Norte Gi0/0, 10.49.0.30 | Oscar | 10.49.0.28/30 | OSPF 1, área 0 |
+| R-WAN a R-Occidente | R-WAN Se0/0/0 (DCE, clock rate 64000), 10.49.0.25 | R-Occidente Se0/0/0 (DTE), 10.49.0.26 | Oscar | 10.49.0.24/30 | EIGRP 10 |
+| CORE-3 a MS1 | CORE-3 Gi1/0/1, 10.49.0.33 | MS1 Gi1/0/1 (puerto ruteado), 10.49.0.34 | Luis | 10.49.0.32/30 | RIPv2, sin auto-summary |
+| CORE-3 a MS2 | CORE-3 Gi1/0/2, 10.49.0.37 | MS2 Gi1/0/1 (puerto ruteado), 10.49.0.38 | Luis | 10.49.0.36/30 | RIPv2, sin auto-summary |
+
+Mientras los cables no estén conectados, estas interfaces aparecen como `down` en cada archivo parcial. Ese estado es esperado y no indica un error de configuración.
+
+<!-- Para Oscar: R-Occidente necesita el módulo HWIC-2T (apaga el router antes de insertarlo). R-Norte anuncia sus redes y el enlace 10.49.0.28/30 en OSPF 1 área 0. R-Occidente anuncia sus redes y el enlace 10.49.0.24/30 en EIGRP 10. -->
+<!-- Para Luis: MS1 y MS2 llevan ip routing, el puerto Gi1/0/1 con no switchport, y anuncian sus redes y su enlace en RIPv2 con no auto-summary. -->
+
 ## 5. Plan de direccionamiento
 
 ### 5.1 Bloques por sede
