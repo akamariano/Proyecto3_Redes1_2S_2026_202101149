@@ -1,97 +1,392 @@
-# Proyecto3_Redes1_2S_2026_202101149
-# Tareas asignadas, Proyecto 2 BanTech GT
+# Manual Técnico, Infraestructura Financiera BanTech GT
 
-Redes de Computadoras 1, segundo semestre 2026. Grupo de tres integrantes (Mariano, Oscar y Luis).
+Redes de Computadoras 1, Proyecto 2, segundo semestre 2026. Universidad de San Carlos de Guatemala, Facultad de Ingeniería, Escuela de Ciencias y Sistemas.
 
-El arranque es hoy miércoles 14 de octubre en la noche y el trabajo va del jueves 15 al lunes 19. La elaboración oficial cierra el 23 y la calificación es el 24, así que del 20 al 23 queda como margen para corregir errores y preparar la defensa.
+<!-- Integración del documento: Luis. Cada integrante escribe su sección en sedes/<su carpeta>/seccion.md y Luis la consolida aquí. -->
 
-## Reparto general
+## 1. Integrantes
 
-| Integrante | Responsabilidad | Horas propias |
+| Nombre | Carné | Rol en el proyecto |
 |---|---|---|
-| Mariano | Coordinación, backbone y Data Center con Sede Central | 14 h |
-| Oscar | Sede Occidente y Sede Norte | 13.5 h |
-| Luis | Sede Oriente, direccionamiento consolidado y manual técnico | 12.5 h |
-| Los tres | Reunión de arranque, fusión del .pkt maestro, sincronización y revisión final | 5 h |
+| Mariano Roberto Rac Noguera | 202101149 | Coordinador, backbone, Data Center y Sede Central |
+| Oscar | <!-- carné --> | Sede Occidente y Sede Norte |
+| Luis | <!-- carné --> | Sede Oriente, integración de la simulación y del manual |
 
-Mariano lleva el backbone y el Data Center porque ahí se concentran los puntos de redistribución, y alguien necesita ver la red completa para integrarla. Oscar toma Occidente y Norte, que son de capa 2 (VTP, Router-on-a-Stick y Rapid PVST+) y no dependen del núcleo hasta el domingo. Luis toma Oriente con HSRP y además consolida el subneteo y el README, que es lo que más se cruza con las demás sedes.
+## 2. Parámetros de identificación
 
-## Miércoles 14, arranque
+El enunciado liga los parámetros de red al carné del coordinador y al número de grupo. El coordinador es Mariano (carné 202101149), por lo que XX = 49. El mismo valor se usa como segundo octeto de todo el direccionamiento, de modo que cada dirección del proyecto queda amarrada a la regla de identificación.
 
-| Responsable | Tarea | Duración | Detalle |
+| Parámetro | Valor | Uso |
+|---|---|---|
+| XX | 49 | Dominio VTP `bantech49` y segundo octeto de la red `10.49.0.0/16` |
+| Y | <!-- último dígito del número de grupo --> | Forma los IDs de VLAN (1Y, 2Y, 1Y+1, etc.) |
+| Contraseña VTP | cisco | Sede Occidente |
+
+Los IDs de VLAN se forman concatenando el número con Y. Por ejemplo, con Y = 3 la VLAN 1Y es la 13 y la VLAN 1Y+1 es la 14.
+
+## 3. Topología general
+
+![Topología general](img/general/topologia_general.png)
+
+<!-- Pendiente (Luis): captura del .pkt maestro con el fondo img/fondos/fondo_general.png, donde se identifica el área de cada protocolo de enrutamiento. -->
+
+La red se divide en un backbone nacional y cuatro redes de borde. El backbone es un núcleo de tres switches de capa 3 que corre OSPF y sirve de punto de encuentro de todos los dominios de enrutamiento. Cada sede se conecta al núcleo por medio de su propio equipo de borde, y cada una pertenece a uno de los cuatro métodos de enrutamiento exigidos.
+
+| Sede | Dominio de enrutamiento | Equipo de borde | Se conecta a |
 |---|---|---|---|
-| Los tres | Reunión de arranque | 1 h | Definir XX, Y, dominio de enrutamiento de cada sede, bloques IP por sede, versión de Packet Tracer y quién crea el repositorio. |
+| Occidente | EIGRP 10 | R-Occidente | R-WAN (serial) |
+| Norte | OSPF área 0 | R-Norte | CORE-2 |
+| Oriente | RIPv2 | MS1 y MS2 | CORE-3 |
+| Data Center y Central | Rutas estáticas | R-CENTRAL2 | R-CENTRAL1, que se conecta a CORE-1 |
 
-## Jueves 15, diseño y subnetting
+## 4. Backbone Core
 
-| Responsable | Tarea | Duración | Detalle |
-|---|---|---|---|
-| Mariano | Repositorio privado | 0.5 h | Crear el repositorio, la estructura de carpetas e invitar a Oscar y Luis. |
-| Mariano | Diseño del backbone | 2 h | Cantidad de equipos del núcleo, forma de interconexión, ubicación de los puntos de redistribución y direcciones /30 de los enlaces punto a punto. |
-| Oscar | VLSM de Occidente y Norte | 1.5 h | Cajas 45, Asesores 30, Gerencia 10, Seguridad 12, Análisis 50, Auditoría 25 y Legal 14 hosts. |
-| Oscar | Topología física de Occidente | 1 h | Colocar R-Occidente, los switches de acceso y los 7 equipos mínimos por área. |
-| Luis | VLSM de Oriente y Central | 1 h | Bóveda 40 y Plataforma 60 hosts, más Core_BD 14, Web_Apps 28 y NOC 10 para pasárselo a Mariano. |
-| Luis | Tabla maestra | 1.5 h | Consolidar el subneteo y las VLANs de las cuatro sedes y el backbone en el README. |
+<!-- Responsable: Mariano -->
 
-## Viernes 16, primeras sedes
+![Boceto del backbone](img/backbone/boceto_backbone.png)
 
-| Responsable | Tarea | Duración | Detalle |
-|---|---|---|---|
-| Mariano | Núcleo en Packet Tracer | 3 h | Tres equipos de capa 3, EtherChannel en el núcleo por fibra, un enlace Ethernet y uno serial. OSPF en el núcleo. |
-| Oscar | Occidente completo | 3 h | VLANs 1Y a 4Y con nombre, VTP bantechXX con contraseña cisco, subinterfaces 802.1Q en R-Occidente y prueba de inter-VLAN. |
-| Luis | Oriente completo | 3 h | MS1 y MS2 en cascada, acceso conectado a ambos, VLANs 8Y y 9Y con SVIs, HSRP con prioridad y preempt en MS1. |
+### 4.1 Justificación del diseño
 
-## Sábado 17, sedes restantes
+El núcleo está formado por tres switches multicapa Cisco 3650 conectados en triángulo. El triángulo es la forma mínima en la que cualquier enlace o cualquier equipo del núcleo puede fallar sin partir la red, porque entre dos switches siempre queda un camino alterno a través del tercero. Cada lado del triángulo es un EtherChannel de capa 3 de dos enlaces de fibra negociado con LACP. Así el canal principal de tráfico transaccional suma el ancho de banda de dos enlaces y sobrevive a la caída de uno de ellos sin reconvergencia del protocolo de enrutamiento.
 
-| Responsable | Tarea | Duración | Detalle |
-|---|---|---|---|
-| Mariano | Data Center y Sede Central | 3.5 h | Switches de distribución y acceso, VLANs Core_BD, Web_Apps y NOC, EtherChannel de al menos dos cables hacia servidores y rutas estáticas en R-Central2. |
-| Oscar | Norte completo | 3.5 h | Triángulo o anillo de switches, Rapid PVST+, prioridad para forzar el Root Bridge, VLANs 5Y a 7Y e inter-VLAN. |
-| Luis | Prueba de HSRP y dominio de Oriente | 2 h | Apagar la interfaz de MS1 y confirmar que MS2 toma el gateway sin perder pings. Configurar el protocolo de enrutamiento de Oriente. |
-| Luis | Esqueleto del README | 1 h | Secciones de la 4.9 listas para pegar capturas. |
+Se eligió EtherChannel de capa 3 (puertos ruteados, sin `switchport`) en lugar de troncales con SVIs porque en un núcleo enrutado cada enlace queda como una red punto a punto independiente. Eso elimina Spanning Tree del núcleo, hace que la redundancia la resuelva OSPF por costo y deja un direccionamiento /30 limpio por enlace.
 
-## Domingo 18, integración
+OSPF es el protocolo del núcleo porque es un estándar abierto, converge rápido y escala por áreas si el banco sigue creciendo. Los otros dominios se colocaron según el papel de cada sede en el negocio. Occidente usa EIGRP porque representa la expansión regional y llega al núcleo por un enlace serial WAN, que es donde EIGRP aprovecha mejor su métrica basada en ancho de banda y retardo. Oriente usa RIPv2 porque es la red del banco recién adquirido, y RIPv2 representa la red legada que se integra sin rediseñarla. Norte habla OSPF directamente con el núcleo porque el centro de autorización de créditos es crítico y conviene que no dependa de ningún punto de redistribución. El Data Center queda en un segmento de rutas estáticas por la política de aislamiento del enunciado.
 
-| Responsable | Tarea | Duración | Detalle |
-|---|---|---|---|
-| Los tres | Fusión del .pkt maestro | 2 h | Copiar cada sede al archivo maestro y conectar los routers de borde al backbone, en llamada para resolver problemas en el momento. |
-| Mariano | Redistribución | 2.5 h | R-Central1 propaga las estáticas al backbone y se configuran al menos dos puntos más entre OSPF, EIGRP y RIPv2. |
-| Oscar | Borde de Occidente y Norte | 2 h | Protocolo acordado en R-Occidente y R-Norte y pings de extremo a extremo hacia el Data Center. |
-| Luis | Etiquetas en la topología | 1 h | Marcar en Packet Tracer el área de cada protocolo de enrutamiento y verificar los hostnames. |
-| Los tres | Sincronización corta, domingo en la noche | 0.5 h | Confirmar que todas las sedes convergen en el maestro y repartir lo que falte para el lunes. |
+La redistribución se concentra en un solo equipo por cada par de dominios. Tener un único punto entre dos protocolos evita bucles de redistribución y vuelve predecible el camino de cada ruta. Por esa misma razón MS1 y MS2 suben ambos a CORE-3, que es el único equipo que traduce entre OSPF y RIPv2.
 
-## Lunes 19, pruebas y manual
+### 4.2 Equipos del backbone
 
-| Responsable | Tarea | Duración | Detalle |
-|---|---|---|---|
-| Mariano | Evidencias de ruteo | 2 h | Capturas de show ip route en los routers frontera y redacción del rol de cada protocolo y de la justificación del backbone. |
-| Oscar | Falla del anillo STP | 2 h | Apagar un enlace del anillo y capturar la reconvergencia. Párrafos de justificación de Occidente y Norte y extractos de configuración. |
-| Luis | Cierre del manual | 3 h | Capturas de HSRP, matriz de pings entre sedes, mapeo lógico de troncales y puertos de acceso, y revisión de redacción. |
-| Los tres | Revisión final contra la rúbrica | 1.5 h | Recorrer la tabla 8.1 requisito por requisito y hacer el commit final. |
+| Equipo | Modelo | Función | Protocolos | Router ID |
+|---|---|---|---|---|
+| CORE-1 | 3650-24PS | Núcleo, enlace hacia Sede Central | OSPF | 1.1.1.1 |
+| CORE-2 | 3650-24PS | Núcleo, agrega WAN y Norte | OSPF | 2.2.2.2 |
+| CORE-3 | 3650-24PS | Núcleo y punto de redistribución hacia la red legada | OSPF y RIPv2 | 3.3.3.3 |
+| R-WAN | 2911 con HWIC-2T | Borde WAN y punto de redistribución hacia la expansión regional | OSPF y EIGRP 10 | 4.4.4.4 |
+| R-CENTRAL1 | 2911 | Punto de redistribución del segmento estático | OSPF y estáticas | 5.5.5.5 |
+| R-CENTRAL2 | 2911 | Router de acceso del Data Center | Estáticas | |
 
-## Decisiones de la reunión de arranque
+### 4.3 Medios físicos y cableado
 
-| Decisión | Propuesta inicial |
+| Medio | Dónde se usa | Motivo |
+|---|---|---|
+| Fibra óptica | Los tres EtherChannel del núcleo (módulos GLC-LH-SMD en Gi1/1/1 a Gi1/1/4) | Mayor ancho de banda y distancia en el canal transaccional |
+| Ethernet de cobre | Enlaces del núcleo hacia los equipos de borde | Interconexión local dentro del mismo sitio |
+| Serial | R-WAN hacia R-Occidente | Representa la conexión WAN hacia la región |
+
+Los cuatro 3650 (CORE-1, CORE-2, CORE-3 y MS-DC) necesitan el módulo AC-POWER-SUPPLY para encender. R-WAN y R-Occidente llevan un módulo HWIC-2T para el enlace serial.
+
+| Equipo A | Puerto A | Equipo B | Puerto B | Cable | Agrupación |
+|---|---|---|---|---|---|
+| CORE-1 | Gi1/1/1 | CORE-2 | Gi1/1/1 | Fibra | Po12 |
+| CORE-1 | Gi1/1/2 | CORE-2 | Gi1/1/2 | Fibra | Po12 |
+| CORE-1 | Gi1/1/3 | CORE-3 | Gi1/1/1 | Fibra | Po13 |
+| CORE-1 | Gi1/1/4 | CORE-3 | Gi1/1/2 | Fibra | Po13 |
+| CORE-2 | Gi1/1/3 | CORE-3 | Gi1/1/3 | Fibra | Po23 |
+| CORE-2 | Gi1/1/4 | CORE-3 | Gi1/1/4 | Fibra | Po23 |
+| CORE-1 | Gi1/0/1 | R-CENTRAL1 | Gi0/0 | Cobre directo | |
+| CORE-2 | Gi1/0/1 | R-WAN | Gi0/0 | Cobre directo | |
+| CORE-2 | Gi1/0/2 | R-Norte | Gi0/0 | Cobre directo | Se cablea en la fusión |
+| CORE-3 | Gi1/0/1 | MS1 | Gi1/0/1 | Cobre directo | Se cablea en la fusión |
+| CORE-3 | Gi1/0/2 | MS2 | Gi1/0/1 | Cobre directo | Se cablea en la fusión |
+| R-WAN | Se0/0/0 (DCE) | R-Occidente | Se0/0/0 | Serial DCE | Se cablea en la fusión |
+
+### 4.4 Tabla de direcciones del backbone
+
+Todo el backbone usa el bloque `10.49.0.0/24` dividido en subredes /30, una por enlace punto a punto. Se ocupan las primeras diez subredes y el resto queda libre para crecimiento.
+
+| # | Enlace | Medio | Red | Extremo A | IP A | Extremo B | IP B |
+|---|---|---|---|---|---|---|---|
+| 1 | Po12 | Fibra, EtherChannel | 10.49.0.0/30 | CORE-1 Gi1/1/1-2 | 10.49.0.1 | CORE-2 Gi1/1/1-2 | 10.49.0.2 |
+| 2 | Po13 | Fibra, EtherChannel | 10.49.0.4/30 | CORE-1 Gi1/1/3-4 | 10.49.0.5 | CORE-3 Gi1/1/1-2 | 10.49.0.6 |
+| 3 | Po23 | Fibra, EtherChannel | 10.49.0.8/30 | CORE-2 Gi1/1/3-4 | 10.49.0.9 | CORE-3 Gi1/1/3-4 | 10.49.0.10 |
+| 4 | CORE-1 a R-CENTRAL1 | Cobre | 10.49.0.12/30 | CORE-1 Gi1/0/1 | 10.49.0.13 | R-CENTRAL1 Gi0/0 | 10.49.0.14 |
+| 5 | R-CENTRAL1 a R-CENTRAL2 | Cobre | 10.49.0.16/30 | R-CENTRAL1 Gi0/1 | 10.49.0.17 | R-CENTRAL2 Gi0/0 | 10.49.0.18 |
+| 6 | CORE-2 a R-WAN | Cobre | 10.49.0.20/30 | CORE-2 Gi1/0/1 | 10.49.0.21 | R-WAN Gi0/0 | 10.49.0.22 |
+| 7 | R-WAN a R-Occidente | Serial | 10.49.0.24/30 | R-WAN Se0/0/0 (DCE) | 10.49.0.25 | R-Occidente Se0/0/0 | 10.49.0.26 |
+| 8 | CORE-2 a R-Norte | Cobre | 10.49.0.28/30 | CORE-2 Gi1/0/2 | 10.49.0.29 | R-Norte Gi0/0 | 10.49.0.30 |
+| 9 | CORE-3 a MS1 | Cobre | 10.49.0.32/30 | CORE-3 Gi1/0/1 | 10.49.0.33 | MS1 Gi1/0/1 | 10.49.0.34 |
+| 10 | CORE-3 a MS2 | Cobre | 10.49.0.36/30 | CORE-3 Gi1/0/2 | 10.49.0.37 | MS2 Gi1/0/1 | 10.49.0.38 |
+
+Las interfaces de los switches del núcleo hacia los equipos de borde se configuran como puertos ruteados (`no switchport`). En el enlace serial, R-WAN es el extremo DCE y lleva el `clock rate`.
+
+### 4.5 Puntos de redistribución
+
+| Equipo | Dominios | Qué propaga |
+|---|---|---|
+| R-WAN | OSPF y EIGRP 10 | Redistribución mutua. Occidente aprende el resto de la red y el núcleo aprende las redes de Occidente |
+| CORE-3 | OSPF y RIPv2 | Redistribución mutua. Oriente aprende el resto de la red y el núcleo aprende las redes de Oriente |
+| R-CENTRAL1 | Estáticas hacia OSPF | Propaga la ruta estática del Data Center al núcleo sin exponer el segmento estático |
+
+Cada protocolo necesita un dato distinto al recibir rutas externas. OSPF requiere la palabra `subnets` para aceptar redes con máscara distinta a la de su clase. EIGRP y RIP requieren una métrica explícita, porque no saben traducir el costo de OSPF y sin ella no instalan las rutas.
+
+```
+! R-WAN
+router ospf 1
+ redistribute eigrp 10 subnets
+router eigrp 10
+ redistribute ospf 1 metric 1544 2000 255 1 1500
+ no auto-summary
+
+! CORE-3
+router ospf 1
+ redistribute rip subnets
+router rip
+ version 2
+ no auto-summary
+ passive-interface Port-channel13
+ passive-interface Port-channel23
+ redistribute ospf 1 metric 2
+
+! R-CENTRAL1
+ip route 10.49.40.0 255.255.255.0 10.49.0.18
+router ospf 1
+ redistribute static subnets
+```
+
+<!-- Pendiente (Mariano): reemplazar este bloque por los extractos reales tomados del .pkt maestro. -->
+
+### 4.6 Tablas de enrutamiento de los routers frontera
+
+<!-- Pendiente (Mariano): capturas de show ip route en R-WAN, CORE-3 y R-CENTRAL1 donde se vean rutas O, O E2, D, D EX, R y S. -->
+
+## 5. Plan de direccionamiento
+
+### 5.1 Bloques por sede
+
+Cada sede tiene reservado un /24 dentro de `10.49.0.0/16`, de modo que cada responsable hace su VLSM sin chocar con los demás.
+
+| Bloque | Uso |
 |---|---|
-| Valores XX y Y | XX son los dos últimos dígitos del carné del coordinador y Y el último dígito del número de grupo. Con eso salen los IDs de VLAN (1Y, 2Y, 1Y+1, etc.) y el dominio VTP bantechXX. |
-| Dominio por sede | Una opción defendible es Oriente con RIPv2 (es el banco recién comprado, la red legada), Occidente con EIGRP (expansión regional) y Norte con OSPF. Central ya tiene asignadas las estáticas. |
-| Bloques IP | Reservar un bloque por sede y uno para los enlaces del backbone, para que cada quien haga su VLSM sin chocar. |
-| Versión de Packet Tracer | Todos la misma versión, porque cada sede se arma en un archivo aparte y el domingo se fusionan en el .pkt maestro. |
-| Convención de nombres | Hostnames como R-Occidente, SW-N-ROOT y MS1, y nombre explícito en cada VLAN. |
+| 10.49.0.0/24 | Enlaces punto a punto del backbone |
+| 10.49.10.0/24 | Sede Occidente |
+| 10.49.20.0/24 | Sede Norte |
+| 10.49.30.0/24 | Sede Oriente |
+| 10.49.40.0/24 | Data Center y Sede Central |
 
-## Requisitos 8.1 y responsable de verificarlos
+### 5.2 Subneteo VLSM
 
-Si alguno de estos requisitos falla, la nota es cero. Por eso cada uno tiene un dueño que lo verifica el lunes.
+En cada subred se reserva una dirección para el gateway además de los hosts requeridos. En Oriente se reservan tres, porque HSRP usa la IP virtual más una IP real en MS1 y otra en MS2. Por eso Asesores (30 hosts), Legal y Core_BD (14 hosts) y Plataforma (60 hosts) suben a la siguiente máscara.
 
-| Requisito | Verifica |
-|---|---|
-| Topología conforme al enunciado | Mariano |
-| RIP, OSPF, EIGRP, HSRP, EtherChannel y VTP funcionando | Mariano |
-| Subnetting VLSM o FLSM correcto | Luis |
-| Repositorio privado con commits propios de los tres | Mariano |
-| README.md con todo lo de la sección 4.9 | Luis |
-| Evidencia de pings, inter-VLAN y convergencia | Oscar |
+| Sede | VLAN | Hosts requeridos | Red | Máscara | Gateway | Rango asignable | Broadcast |
+|---|---|---|---|---|---|---|---|
+| Occidente | Cajas | 45 | 10.49.10.0 | /26 | 10.49.10.1 | .2 a .62 | 10.49.10.63 |
+| Occidente | Asesores | 30 | 10.49.10.64 | /26 | 10.49.10.65 | .66 a .126 | 10.49.10.127 |
+| Occidente | Seguridad | 12 | 10.49.10.128 | /28 | 10.49.10.129 | .130 a .142 | 10.49.10.143 |
+| Occidente | Gerencia | 10 | 10.49.10.144 | /28 | 10.49.10.145 | .146 a .158 | 10.49.10.159 |
+| Norte | Análisis | 50 | 10.49.20.0 | /26 | 10.49.20.1 | .2 a .62 | 10.49.20.63 |
+| Norte | Auditoría | 25 | 10.49.20.64 | /27 | 10.49.20.65 | .66 a .94 | 10.49.20.95 |
+| Norte | Legal | 14 | 10.49.20.96 | /27 | 10.49.20.97 | .98 a .126 | 10.49.20.127 |
+| Oriente | Plataforma | 60 | 10.49.30.0 | /25 | 10.49.30.1 (virtual) | .4 a .126 | 10.49.30.127 |
+| Oriente | Bóveda | 40 | 10.49.30.128 | /26 | 10.49.30.129 (virtual) | .132 a .190 | 10.49.30.191 |
+| Central | Web_Apps | 28 | 10.49.40.0 | /27 | 10.49.40.1 | .2 a .30 | 10.49.40.31 |
+| Central | Core_BD | 14 | 10.49.40.32 | /27 | 10.49.40.33 | .34 a .62 | 10.49.40.63 |
+| Central | NOC | 10 | 10.49.40.64 | /28 | 10.49.40.65 | .66 a .78 | 10.49.40.79 |
+| Central | Enlace R-CENTRAL2 a MS-DC | 2 | 10.49.40.80 | /30 | | .81 y .82 | 10.49.40.83 |
 
-## Forma de trabajo en el repositorio
+En Oriente, MS1 usa .2 y MS2 usa .3 en Plataforma, y MS1 usa .130 y MS2 usa .131 en Bóveda.
 
-Cada integrante sube sus propios commits desde su cuenta, porque la rúbrica pide commits propios. Lo más práctico es una carpeta por sede con su .pkt parcial y sus extractos de configuración, y el .pkt maestro en la raíz a partir del domingo.
+<!-- Oscar y Luis: esta tabla es una propuesta. Si cambian algo en su sede, avísenle a Luis para mantenerla igual al .pkt. -->
+
+## 6. Tabla de VLANs
+
+| ID | Nombre | Sede | Red |
+|---|---|---|---|
+| 1Y | Cajas | Occidente | 10.49.10.0/26 |
+| 2Y | Asesores | Occidente | 10.49.10.64/26 |
+| 3Y | Gerencia | Occidente | 10.49.10.144/28 |
+| 4Y | Seguridad | Occidente | 10.49.10.128/28 |
+| 5Y | Analisis | Norte | 10.49.20.0/26 |
+| 6Y | Auditoria | Norte | 10.49.20.64/27 |
+| 7Y | Legal | Norte | 10.49.20.96/27 |
+| 8Y | Boveda | Oriente | 10.49.30.128/26 |
+| 9Y | Plataforma | Oriente | 10.49.30.0/25 |
+| 1Y+1 | Core_BD | Central | 10.49.40.32/27 |
+| 2Y+1 | Web_Apps | Central | 10.49.40.0/27 |
+| 3Y+1 | NOC | Central | 10.49.40.64/28 |
+
+<!-- Reemplazar Y por el número real una vez confirmado. Los nombres van sin tilde para evitar problemas en IOS. -->
+
+## 7. Sede Occidente, Agencia Regional Comercial
+
+<!-- Responsable: Oscar -->
+
+![Topología de Occidente](img/occidente-norte/topologia_occidente.png)
+
+### 7.1 Justificación de la arquitectura
+
+<!-- Pendiente (Oscar): un párrafo que explique por qué se eligió esta topología física, qué ventajas de tolerancia a fallos ofrece y cómo responde a la necesidad de que un problema en Asesores no afecte a Cajas. -->
+
+### 7.2 Mapeo lógico
+
+| Equipo | Función | Enlaces troncales 802.1Q | Puertos de acceso |
+|---|---|---|---|
+| R-Occidente | Router de borde, inter-VLAN por Router-on-a-Stick | | |
+| <!-- switch --> | Switch principal, VTP servidor | | |
+| <!-- switch --> | Acceso, VTP cliente | | |
+
+### 7.3 Extractos de configuración
+
+<!-- Pendiente (Oscar): subinterfaces de R-Occidente, VTP, VLANs con nombre y EIGRP. -->
+
+## 8. Sede Norte, Centro de Autorización de Créditos
+
+<!-- Responsable: Oscar -->
+
+![Topología de Norte](img/occidente-norte/topologia_norte.png)
+
+### 8.1 Justificación de la arquitectura
+
+<!-- Pendiente (Oscar): por qué anillo o triángulo, qué switch es el Root Bridge y por qué, y cómo se elimina el punto único de falla entre los analistas y el switch principal. -->
+
+### 8.2 Mapeo lógico
+
+| Equipo | Función | Enlaces troncales 802.1Q | Puertos de acceso |
+|---|---|---|---|
+| R-Norte | Router de borde, inter-VLAN | | |
+| <!-- switch --> | Switch principal, Root Bridge | | |
+
+### 8.3 Extractos de configuración
+
+<!-- Pendiente (Oscar): Rapid PVST+, prioridad del Root Bridge, VLANs con nombre y OSPF en R-Norte. -->
+
+## 9. Sede Oriente, Centro Financiero Legado
+
+<!-- Responsable: Luis -->
+
+![Topología de Oriente](img/oriente/topologia_oriente.png)
+
+### 9.1 Justificación de la arquitectura
+
+<!-- Pendiente (Luis): por qué MS1 y MS2 en cascada, por qué el acceso se conecta a ambos y cómo HSRP mantiene el gateway si MS1 pierde energía. -->
+
+### 9.2 Mapeo lógico
+
+| Equipo | Función | Enlaces troncales 802.1Q | Puertos de acceso |
+|---|---|---|---|
+| MS1 | Distribución, HSRP activo (prioridad mayor, preempt) | | |
+| MS2 | Distribución, HSRP en espera | | |
+
+### 9.3 Extractos de configuración
+
+<!-- Pendiente (Luis): SVIs con standby, prioridad y preempt, y RIPv2. -->
+
+## 10. Data Center y Sede Central
+
+<!-- Responsable: Mariano -->
+
+![Topología del Data Center](img/backbone-central/topologia_central.png)
+
+### 10.1 Justificación de la arquitectura
+
+La sede usa dos routers con funciones separadas. R-CENTRAL2 es el router de acceso del Data Center y solo conoce rutas estáticas: una ruta por defecto hacia R-CENTRAL1 y una ruta resumida hacia el bloque de servidores a través de MS-DC. R-CENTRAL1 recibe el segmento con una sola ruta estática resumida (`10.49.40.0/24`) y la redistribuye en OSPF. De esta forma el resto de la red alcanza a los servidores sin que ningún protocolo dinámico entre al segmento de alta seguridad.
+
+MS-DC es el switch de distribución de los servidores y hace el enrutamiento inter-VLAN con SVIs para Core_BD, Web_Apps y NOC. Hacia cada uno de los dos switches de acceso sube por un EtherChannel LACP de dos cables. Eso responde a la necesidad de sumar capacidad ante las ráfagas de tráfico y además tolera la caída de un cable sin cortar el servicio. SW-DC-ACC1 concentra los servidores de base de datos y de banca virtual, y SW-DC-ACC2 concentra los equipos de monitoreo del NOC, de modo que el tráfico de operación no compite con el de los servidores en el mismo canal.
+
+### 10.2 Mapeo lógico
+
+| Equipo | Función | Enlaces troncales 802.1Q | Puertos de acceso |
+|---|---|---|---|
+| R-CENTRAL1 | Redistribución del segmento estático hacia OSPF | Ninguno (puertos ruteados) | Ninguno |
+| R-CENTRAL2 | Router de acceso del Data Center, rutas estáticas | Ninguno (puertos ruteados) | Ninguno |
+| MS-DC | Switch principal de distribución e inter-VLAN | Po1 (Gi1/0/2-3) y Po2 (Gi1/0/4-5) | Ninguno |
+| SW-DC-ACC1 | Acceso de servidores | Po1 (Gi0/1-2) | Fa0/1-7 Core_BD, Fa0/8-14 Web_Apps |
+| SW-DC-ACC2 | Acceso del NOC | Po2 (Gi0/1-2) | Fa0/1-7 NOC |
+
+### 10.3 Cableado
+
+| Equipo A | Puerto A | Equipo B | Puerto B | Cable | Agrupación |
+|---|---|---|---|---|---|
+| R-CENTRAL1 | Gi0/1 | R-CENTRAL2 | Gi0/0 | Cobre directo | |
+| R-CENTRAL2 | Gi0/1 | MS-DC | Gi1/0/1 | Cobre directo | |
+| MS-DC | Gi1/0/2 | SW-DC-ACC1 | Gi0/1 | Cobre directo | Po1 |
+| MS-DC | Gi1/0/3 | SW-DC-ACC1 | Gi0/2 | Cobre directo | Po1 |
+| MS-DC | Gi1/0/4 | SW-DC-ACC2 | Gi0/1 | Cobre directo | Po2 |
+| MS-DC | Gi1/0/5 | SW-DC-ACC2 | Gi0/2 | Cobre directo | Po2 |
+| SW-DC-ACC1 | Fa0/1 a Fa0/7 | BD1 a BD7 | Fa0 | Cobre directo | VLAN Core_BD |
+| SW-DC-ACC1 | Fa0/8 a Fa0/14 | WEB1 a WEB7 | Fa0 | Cobre directo | VLAN Web_Apps |
+| SW-DC-ACC2 | Fa0/1 a Fa0/7 | NOC1 a NOC7 | Fa0 | Cobre directo | VLAN NOC |
+
+Cada equipo final va en el puerto con su mismo número. Por ejemplo, BD1 va en Fa0/1, BD7 en Fa0/7, WEB1 en Fa0/8 y WEB7 en Fa0/14.
+
+### 10.4 Direccionamiento de interfaces
+
+| Equipo | Interfaz | Dirección IP | Máscara | Descripción |
+|---|---|---|---|---|
+| R-CENTRAL1 | Gi0/0 | 10.49.0.14 | 255.255.255.252 | Hacia CORE-1 |
+| R-CENTRAL1 | Gi0/1 | 10.49.0.17 | 255.255.255.252 | Hacia R-CENTRAL2 |
+| R-CENTRAL2 | Gi0/0 | 10.49.0.18 | 255.255.255.252 | Hacia R-CENTRAL1 |
+| R-CENTRAL2 | Gi0/1 | 10.49.40.81 | 255.255.255.252 | Hacia MS-DC |
+| MS-DC | Gi1/0/1 | 10.49.40.82 | 255.255.255.252 | Puerto ruteado hacia R-CENTRAL2 |
+| MS-DC | VLAN Web_Apps | 10.49.40.1 | 255.255.255.224 | Gateway de WEB1 a WEB7 |
+| MS-DC | VLAN Core_BD | 10.49.40.33 | 255.255.255.224 | Gateway de BD1 a BD7 |
+| MS-DC | VLAN NOC | 10.49.40.65 | 255.255.255.240 | Gateway de NOC1 a NOC7 |
+
+### 10.5 Direccionamiento de equipos finales
+
+| Equipo | VLAN | Dirección IP | Máscara | Gateway |
+|---|---|---|---|---|
+| BD1 | Core_BD | 10.49.40.34 | 255.255.255.224 | 10.49.40.33 |
+| BD2 | Core_BD | 10.49.40.35 | 255.255.255.224 | 10.49.40.33 |
+| BD3 | Core_BD | 10.49.40.36 | 255.255.255.224 | 10.49.40.33 |
+| BD4 | Core_BD | 10.49.40.37 | 255.255.255.224 | 10.49.40.33 |
+| BD5 | Core_BD | 10.49.40.38 | 255.255.255.224 | 10.49.40.33 |
+| BD6 | Core_BD | 10.49.40.39 | 255.255.255.224 | 10.49.40.33 |
+| BD7 | Core_BD | 10.49.40.40 | 255.255.255.224 | 10.49.40.33 |
+| WEB1 | Web_Apps | 10.49.40.2 | 255.255.255.224 | 10.49.40.1 |
+| WEB2 | Web_Apps | 10.49.40.3 | 255.255.255.224 | 10.49.40.1 |
+| WEB3 | Web_Apps | 10.49.40.4 | 255.255.255.224 | 10.49.40.1 |
+| WEB4 | Web_Apps | 10.49.40.5 | 255.255.255.224 | 10.49.40.1 |
+| WEB5 | Web_Apps | 10.49.40.6 | 255.255.255.224 | 10.49.40.1 |
+| WEB6 | Web_Apps | 10.49.40.7 | 255.255.255.224 | 10.49.40.1 |
+| WEB7 | Web_Apps | 10.49.40.8 | 255.255.255.224 | 10.49.40.1 |
+| NOC1 | NOC | 10.49.40.66 | 255.255.255.240 | 10.49.40.65 |
+| NOC2 | NOC | 10.49.40.67 | 255.255.255.240 | 10.49.40.65 |
+| NOC3 | NOC | 10.49.40.68 | 255.255.255.240 | 10.49.40.65 |
+| NOC4 | NOC | 10.49.40.69 | 255.255.255.240 | 10.49.40.65 |
+| NOC5 | NOC | 10.49.40.70 | 255.255.255.240 | 10.49.40.65 |
+| NOC6 | NOC | 10.49.40.71 | 255.255.255.240 | 10.49.40.65 |
+| NOC7 | NOC | 10.49.40.72 | 255.255.255.240 | 10.49.40.65 |
+
+### 10.6 Extractos de configuración
+
+<!-- Pendiente (Mariano): estáticas de R-CENTRAL1 y R-CENTRAL2, SVIs de MS-DC y EtherChannel. -->
+
+## 11. Pruebas de conectividad y alta disponibilidad
+
+### 11.1 Convergencia de extremo a extremo
+
+| Origen | Destino | Resultado | Captura |
+|---|---|---|---|
+| PC de Occidente | Servidor del Data Center | | |
+| PC de Norte | PC de Oriente | | |
+| PC de Oriente | Servidor del Data Center | | |
+| PC de Occidente | PC de Norte | | |
+
+<!-- Pendiente (Luis): matriz completa de pings entre sedes. -->
+
+### 11.2 Enrutamiento inter-VLAN por sede
+
+<!-- Pendiente (cada responsable): ping entre dos VLANs de su propia sede. -->
+
+### 11.3 Conmutación por error
+
+<!-- Pendiente (Luis): apagar la interfaz de MS1 y mostrar con show standby que MS2 pasa a activo sin perder pings. -->
+<!-- Pendiente (Oscar): apagar un enlace del anillo de Norte y mostrar la reconvergencia con show spanning-tree. -->
+<!-- Pendiente (Mariano): apagar un enlace de un Port-channel del núcleo y mostrar con show etherchannel summary que el canal sigue arriba. -->
+
+## 12. Estructura del repositorio
+
+```
+README.md                    manual técnico consolidado (Luis)
+BanTech_GT.pkt               simulación completa (Luis)
+sedes/backbone-central/      .pkt parcial, configs y seccion.md de Mariano
+sedes/occidente-norte/       .pkt parcial, configs y seccion.md de Oscar
+sedes/oriente/               .pkt parcial, configs y seccion.md de Luis
+img/fondos/                  fondos de Packet Tracer
+img/general/                 capturas de la topología completa
+img/backbone/                boceto y capturas del backbone
+img/backbone-central/        capturas de Central y Data Center
+img/occidente-norte/         capturas de Occidente y Norte
+img/oriente/                 capturas de Oriente
+```
