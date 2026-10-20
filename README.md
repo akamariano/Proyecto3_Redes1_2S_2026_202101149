@@ -19,10 +19,10 @@ El enunciado liga los parámetros de red al carné del coordinador y al número 
 | Parámetro | Valor | Uso |
 |---|---|---|
 | XX | 49 | Dominio VTP `bantech49` y segundo octeto de la red `10.49.0.0/16` |
-| Y | <!-- último dígito del número de grupo --> | Forma los IDs de VLAN (1Y, 2Y, 1Y+1, etc.) |
+| Y | 4 | Grupo 4. Forma los IDs de VLAN (1Y, 2Y, 1Y+1, etc.) |
 | Contraseña VTP | cisco | Sede Occidente |
 
-Los IDs de VLAN se forman concatenando el número con Y. Por ejemplo, con Y = 3 la VLAN 1Y es la 13 y la VLAN 1Y+1 es la 14.
+Los IDs de VLAN se forman concatenando el número con Y. Con Y = 4, la VLAN 1Y es la 14 y la VLAN 1Y+1 es la 15.
 
 ## 3. Topología general
 
@@ -43,7 +43,9 @@ La red se divide en un backbone nacional y cuatro redes de borde. El backbone es
 
 <!-- Responsable: Mariano -->
 
-![Boceto del backbone](img/backbone/boceto_backbone.png)
+El detalle completo del backbone, del Data Center y de la Sede Central (tablas completas, extractos de todos los equipos y verificaciones) está en [Mariano/README.md](Mariano/README.md). Esta sección resume lo que afecta a todo el grupo.
+
+![Boceto del backbone](Images/boceto_backbone.png)
 
 ### 4.1 Justificación del diseño
 
@@ -74,7 +76,7 @@ La redistribución se concentra en un solo equipo por cada par de dominios. Tene
 | Ethernet de cobre | Enlaces del núcleo hacia los equipos de borde | Interconexión local dentro del mismo sitio |
 | Serial | R-WAN hacia R-Occidente | Representa la conexión WAN hacia la región |
 
-Los cuatro 3650 (CORE-1, CORE-2, CORE-3 y MS-DC) necesitan el módulo AC-POWER-SUPPLY para encender. R-WAN y R-Occidente llevan un módulo HWIC-2T para el enlace serial.
+Los cuatro 3650 (CORE-1, CORE-2, CORE-3 y MS-DC) necesitan el módulo AC-POWER-SUPPLY para encender. R-WAN y R-Occidente llevan un módulo HWIC-2T para el enlace serial. En R-WAN el HWIC-2T está en la ranura 3, por eso su puerto serial es Se0/3/0.
 
 | Equipo A | Puerto A | Equipo B | Puerto B | Cable | Agrupación |
 |---|---|---|---|---|---|
@@ -89,7 +91,7 @@ Los cuatro 3650 (CORE-1, CORE-2, CORE-3 y MS-DC) necesitan el módulo AC-POWER-S
 | CORE-2 | Gi1/0/2 | R-Norte | Gi0/0 | Cobre directo | Se cablea en la fusión |
 | CORE-3 | Gi1/0/1 | MS1 | Gi1/0/1 | Cobre directo | Se cablea en la fusión |
 | CORE-3 | Gi1/0/2 | MS2 | Gi1/0/1 | Cobre directo | Se cablea en la fusión |
-| R-WAN | Se0/0/0 (DCE) | R-Occidente | Se0/0/0 | Serial DCE | Se cablea en la fusión |
+| R-WAN | Se0/3/0 (DCE) | R-Occidente | Serial (según su módulo) | Serial DCE | Se cablea en la fusión |
 
 ### 4.4 Tabla de direcciones del backbone
 
@@ -103,7 +105,7 @@ Todo el backbone usa el bloque `10.49.0.0/24` dividido en subredes /30, una por 
 | 4 | CORE-1 a R-CENTRAL1 | Cobre | 10.49.0.12/30 | CORE-1 Gi1/0/1 | 10.49.0.13 | R-CENTRAL1 Gi0/0 | 10.49.0.14 |
 | 5 | R-CENTRAL1 a R-CENTRAL2 | Cobre | 10.49.0.16/30 | R-CENTRAL1 Gi0/1 | 10.49.0.17 | R-CENTRAL2 Gi0/0 | 10.49.0.18 |
 | 6 | CORE-2 a R-WAN | Cobre | 10.49.0.20/30 | CORE-2 Gi1/0/1 | 10.49.0.21 | R-WAN Gi0/0 | 10.49.0.22 |
-| 7 | R-WAN a R-Occidente | Serial | 10.49.0.24/30 | R-WAN Se0/0/0 (DCE) | 10.49.0.25 | R-Occidente Se0/0/0 | 10.49.0.26 |
+| 7 | R-WAN a R-Occidente | Serial | 10.49.0.24/30 | R-WAN Se0/3/0 (DCE) | 10.49.0.25 | R-Occidente serial (según su módulo) | 10.49.0.26 |
 | 8 | CORE-2 a R-Norte | Cobre | 10.49.0.28/30 | CORE-2 Gi1/0/2 | 10.49.0.29 | R-Norte Gi0/0 | 10.49.0.30 |
 | 9 | CORE-3 a MS1 | Cobre | 10.49.0.32/30 | CORE-3 Gi1/0/1 | 10.49.0.33 | MS1 Gi1/0/1 | 10.49.0.34 |
 | 10 | CORE-3 a MS2 | Cobre | 10.49.0.36/30 | CORE-3 Gi1/0/2 | 10.49.0.37 | MS2 Gi1/0/1 | 10.49.0.38 |
@@ -118,37 +120,53 @@ Las interfaces de los switches del núcleo hacia los equipos de borde se configu
 | CORE-3 | OSPF y RIPv2 | Redistribución mutua. Oriente aprende el resto de la red y el núcleo aprende las redes de Oriente |
 | R-CENTRAL1 | Estáticas hacia OSPF | Propaga la ruta estática del Data Center al núcleo sin exponer el segmento estático |
 
-Cada protocolo necesita un dato distinto al recibir rutas externas. OSPF requiere la palabra `subnets` para aceptar redes con máscara distinta a la de su clase. EIGRP y RIP requieren una métrica explícita, porque no saben traducir el costo de OSPF y sin ella no instalan las rutas.
+Cada protocolo necesita un dato distinto al recibir rutas externas. OSPF requiere la palabra `subnets` para redistribuir redes con máscara distinta a la de su clase, y como todas las redes del proyecto son subredes de 10.0.0.0/8, sin ella no se redistribuiría ninguna. EIGRP y RIP requieren una métrica explícita, porque no saben traducir el costo de OSPF y sin ella anuncian las rutas como inalcanzables. En EIGRP, `1544 2000 255 1 1500` son ancho de banda en kbps (el de un T1), retardo en decenas de microsegundos, confiabilidad, carga y MTU. En RIP, `metric 2` asigna dos saltos y deja margen bajo el límite de 15.
 
 ```
 ! R-WAN
+interface Serial0/3/0
+ ip address 10.49.0.25 255.255.255.252
+ clock rate 64000
 router ospf 1
+ router-id 4.4.4.4
+ network 10.49.0.20 0.0.0.3 area 0
  redistribute eigrp 10 subnets
 router eigrp 10
- redistribute ospf 1 metric 1544 2000 255 1 1500
+ network 10.49.0.24 0.0.0.3
  no auto-summary
-
+ redistribute ospf 1 metric 1544 2000 255 1 1500
+!
 ! CORE-3
 router ospf 1
+ router-id 3.3.3.3
+ network 10.49.0.4 0.0.0.3 area 0
+ network 10.49.0.8 0.0.0.3 area 0
  redistribute rip subnets
 router rip
  version 2
  no auto-summary
+ network 10.0.0.0
  passive-interface Port-channel13
  passive-interface Port-channel23
  redistribute ospf 1 metric 2
-
+!
 ! R-CENTRAL1
 ip route 10.49.40.0 255.255.255.0 10.49.0.18
 router ospf 1
+ router-id 5.5.5.5
+ network 10.49.0.12 0.0.0.3 area 0
+ network 10.49.0.16 0.0.0.3 area 0
+ passive-interface GigabitEthernet0/1
  redistribute static subnets
 ```
 
-<!-- Pendiente (Mariano): reemplazar este bloque por los extractos reales tomados del .pkt maestro. -->
+En R-CENTRAL1, `passive-interface GigabitEthernet0/1` anuncia el enlace hacia R-CENTRAL2 en OSPF pero no envía hellos por él, de modo que ningún protocolo dinámico entra al segmento de alta seguridad.
 
-### 4.6 Tablas de enrutamiento de los routers frontera
+### 4.6 Vecinos OSPF y tabla de enrutamiento del núcleo
 
-<!-- Pendiente (Mariano): capturas de show ip route en R-WAN, CORE-3 y R-CENTRAL1 donde se vean rutas O, O E2, D, D EX, R y S. -->
+![show ip ospf neighbor y show ip route ospf en CORE-1](Images/Screenshot%202026-10-20%20at%2012.26.31%E2%80%AFPM.png)
+
+En CORE-1 los tres vecinos OSPF (2.2.2.2, 3.3.3.3 y 5.5.5.5) están en FULL. La red 10.49.0.8/30 aparece por dos caminos de costo igual (vía CORE-2 y vía CORE-3), y la ruta `O E2 10.49.40.0 [110/20]` aprendida de R-CENTRAL1 prueba que la ruta estática del Data Center se redistribuye hacia OSPF.
 
 ### 4.7 Enlaces de integración entre el backbone y las sedes
 
@@ -157,7 +175,7 @@ Cuatro enlaces unen el backbone con los equipos de borde de Occidente, Norte y O
 | Enlace | Extremo backbone (Mariano) | Extremo de la sede | Responsable de la sede | Red | Protocolo en ambos extremos |
 |---|---|---|---|---|---|
 | CORE-2 a R-Norte | CORE-2 Gi1/0/2, 10.49.0.29 | R-Norte Gi0/0, 10.49.0.30 | Oscar | 10.49.0.28/30 | OSPF 1, área 0 |
-| R-WAN a R-Occidente | R-WAN Se0/0/0 (DCE, clock rate 64000), 10.49.0.25 | R-Occidente Se0/0/0 (DTE), 10.49.0.26 | Oscar | 10.49.0.24/30 | EIGRP 10 |
+| R-WAN a R-Occidente | R-WAN Se0/3/0 (DCE, clock rate 64000), 10.49.0.25 | R-Occidente serial según su módulo (DTE), 10.49.0.26 | Oscar | 10.49.0.24/30 | EIGRP 10 |
 | CORE-3 a MS1 | CORE-3 Gi1/0/1, 10.49.0.33 | MS1 Gi1/0/1 (puerto ruteado), 10.49.0.34 | Luis | 10.49.0.32/30 | RIPv2, sin auto-summary |
 | CORE-3 a MS2 | CORE-3 Gi1/0/2, 10.49.0.37 | MS2 Gi1/0/1 (puerto ruteado), 10.49.0.38 | Luis | 10.49.0.36/30 | RIPv2, sin auto-summary |
 
@@ -206,22 +224,22 @@ En Oriente, MS1 usa .2 y MS2 usa .3 en Plataforma, y MS1 usa .130 y MS2 usa .131
 
 ## 6. Tabla de VLANs
 
-| ID | Nombre | Sede | Red |
-|---|---|---|---|
-| 1Y | Cajas | Occidente | 10.49.10.0/26 |
-| 2Y | Asesores | Occidente | 10.49.10.64/26 |
-| 3Y | Gerencia | Occidente | 10.49.10.144/28 |
-| 4Y | Seguridad | Occidente | 10.49.10.128/28 |
-| 5Y | Analisis | Norte | 10.49.20.0/26 |
-| 6Y | Auditoria | Norte | 10.49.20.64/27 |
-| 7Y | Legal | Norte | 10.49.20.96/27 |
-| 8Y | Boveda | Oriente | 10.49.30.128/26 |
-| 9Y | Plataforma | Oriente | 10.49.30.0/25 |
-| 1Y+1 | Core_BD | Central | 10.49.40.32/27 |
-| 2Y+1 | Web_Apps | Central | 10.49.40.0/27 |
-| 3Y+1 | NOC | Central | 10.49.40.64/28 |
+Los IDs se forman con Y = 4. Los nombres van sin tilde para evitar problemas en IOS.
 
-<!-- Reemplazar Y por el número real una vez confirmado. Los nombres van sin tilde para evitar problemas en IOS. -->
+| ID | Fórmula | Nombre | Sede | Red |
+|---|---|---|---|---|
+| 14 | 1Y | Cajas | Occidente | 10.49.10.0/26 |
+| 24 | 2Y | Asesores | Occidente | 10.49.10.64/26 |
+| 34 | 3Y | Gerencia | Occidente | 10.49.10.144/28 |
+| 44 | 4Y | Seguridad | Occidente | 10.49.10.128/28 |
+| 54 | 5Y | Analisis | Norte | 10.49.20.0/26 |
+| 64 | 6Y | Auditoria | Norte | 10.49.20.64/27 |
+| 74 | 7Y | Legal | Norte | 10.49.20.96/27 |
+| 84 | 8Y | Boveda | Oriente | 10.49.30.128/26 |
+| 94 | 9Y | Plataforma | Oriente | 10.49.30.0/25 |
+| 15 | 1Y+1 | Core_BD | Central | 10.49.40.32/27 |
+| 25 | 2Y+1 | Web_Apps | Central | 10.49.40.0/27 |
+| 35 | 3Y+1 | NOC | Central | 10.49.40.64/28 |
 
 ## 7. Sede Occidente, Agencia Regional Comercial
 
@@ -291,11 +309,13 @@ En Oriente, MS1 usa .2 y MS2 usa .3 en Plataforma, y MS1 usa .130 y MS2 usa .131
 
 <!-- Responsable: Mariano -->
 
-![Topología del Data Center](img/backbone-central/topologia_central.png)
+El detalle completo de esta sede está en [Mariano/README.md](Mariano/README.md).
+
+![Data Center cableado](Images/Screenshot%202026-10-20%20at%2012.41.08%E2%80%AFPM.png)
 
 ### 10.1 Justificación de la arquitectura
 
-La sede usa dos routers con funciones separadas. R-CENTRAL2 es el router de acceso del Data Center y solo conoce rutas estáticas: una ruta por defecto hacia R-CENTRAL1 y una ruta resumida hacia el bloque de servidores a través de MS-DC. R-CENTRAL1 recibe el segmento con una sola ruta estática resumida (`10.49.40.0/24`) y la redistribuye en OSPF. De esta forma el resto de la red alcanza a los servidores sin que ningún protocolo dinámico entre al segmento de alta seguridad.
+La sede usa dos routers con funciones separadas. R-CENTRAL2 es el router de acceso del Data Center y solo conoce rutas estáticas: una ruta por defecto hacia R-CENTRAL1 y tres rutas estáticas explícitas, una por cada VLAN de servidores (10.49.40.0/27, 10.49.40.32/27 y 10.49.40.64/28), a través de MS-DC. R-CENTRAL1 recibe el segmento con una sola ruta estática resumida (`10.49.40.0/24`) y la redistribuye en OSPF. De esta forma el resto de la red alcanza a los servidores sin que ningún protocolo dinámico entre al segmento de alta seguridad.
 
 MS-DC es el switch de distribución de los servidores y hace el enrutamiento inter-VLAN con SVIs para Core_BD, Web_Apps y NOC. Hacia cada uno de los dos switches de acceso sube por un EtherChannel LACP de dos cables. Eso responde a la necesidad de sumar capacidad ante las ráfagas de tráfico y además tolera la caída de un cable sin cortar el servicio. SW-DC-ACC1 concentra los servidores de base de datos y de banca virtual, y SW-DC-ACC2 concentra los equipos de monitoreo del NOC, de modo que el tráfico de operación no compite con el de los servidores en el mismo canal.
 
@@ -306,8 +326,8 @@ MS-DC es el switch de distribución de los servidores y hace el enrutamiento int
 | R-CENTRAL1 | Redistribución del segmento estático hacia OSPF | Ninguno (puertos ruteados) | Ninguno |
 | R-CENTRAL2 | Router de acceso del Data Center, rutas estáticas | Ninguno (puertos ruteados) | Ninguno |
 | MS-DC | Switch principal de distribución e inter-VLAN | Po1 (Gi1/0/2-3) y Po2 (Gi1/0/4-5) | Ninguno |
-| SW-DC-ACC1 | Acceso de servidores | Po1 (Gi0/1-2) | Fa0/1-7 Core_BD, Fa0/8-14 Web_Apps |
-| SW-DC-ACC2 | Acceso del NOC | Po2 (Gi0/1-2) | Fa0/1-7 NOC |
+| SW-DC-ACC1 | Acceso de servidores | Po1 (Gi0/1-2) | Fa0/1-7 VLAN 15 Core_BD, Fa0/8-14 VLAN 25 Web_Apps |
+| SW-DC-ACC2 | Acceso del NOC | Po2 (Gi0/1-2) | Fa0/1-7 VLAN 35 NOC |
 
 ### 10.3 Cableado
 
@@ -334,9 +354,9 @@ Cada equipo final va en el puerto con su mismo número. Por ejemplo, BD1 va en F
 | R-CENTRAL2 | Gi0/0 | 10.49.0.18 | 255.255.255.252 | Hacia R-CENTRAL1 |
 | R-CENTRAL2 | Gi0/1 | 10.49.40.81 | 255.255.255.252 | Hacia MS-DC |
 | MS-DC | Gi1/0/1 | 10.49.40.82 | 255.255.255.252 | Puerto ruteado hacia R-CENTRAL2 |
-| MS-DC | VLAN Web_Apps | 10.49.40.1 | 255.255.255.224 | Gateway de WEB1 a WEB7 |
-| MS-DC | VLAN Core_BD | 10.49.40.33 | 255.255.255.224 | Gateway de BD1 a BD7 |
-| MS-DC | VLAN NOC | 10.49.40.65 | 255.255.255.240 | Gateway de NOC1 a NOC7 |
+| MS-DC | Vlan25 (Web_Apps) | 10.49.40.1 | 255.255.255.224 | Gateway de WEB1 a WEB7 |
+| MS-DC | Vlan15 (Core_BD) | 10.49.40.33 | 255.255.255.224 | Gateway de BD1 a BD7 |
+| MS-DC | Vlan35 (NOC) | 10.49.40.65 | 255.255.255.240 | Gateway de NOC1 a NOC7 |
 
 ### 10.5 Direccionamiento de equipos finales
 
@@ -366,7 +386,44 @@ Cada equipo final va en el puerto con su mismo número. Por ejemplo, BD1 va en F
 
 ### 10.6 Extractos de configuración
 
-<!-- Pendiente (Mariano): estáticas de R-CENTRAL1 y R-CENTRAL2, SVIs de MS-DC y EtherChannel. -->
+```
+! R-CENTRAL1
+ip route 10.49.40.0 255.255.255.0 10.49.0.18
+!
+! R-CENTRAL2
+ip route 0.0.0.0 0.0.0.0 10.49.0.17
+ip route 10.49.40.0 255.255.255.224 10.49.40.82
+ip route 10.49.40.32 255.255.255.224 10.49.40.82
+ip route 10.49.40.64 255.255.255.240 10.49.40.82
+!
+! MS-DC
+ip routing
+interface range GigabitEthernet1/0/2 - 3
+ switchport mode trunk
+ channel-group 1 mode active
+interface Port-channel1
+ switchport mode trunk
+ switchport trunk allowed vlan 15,25,35
+interface range GigabitEthernet1/0/4 - 5
+ switchport mode trunk
+ channel-group 2 mode active
+interface Port-channel2
+ switchport mode trunk
+ switchport trunk allowed vlan 15,25,35
+interface Vlan15
+ ip address 10.49.40.33 255.255.255.224
+interface Vlan25
+ ip address 10.49.40.1 255.255.255.224
+interface Vlan35
+ ip address 10.49.40.65 255.255.255.240
+ip route 0.0.0.0 0.0.0.0 10.49.40.81
+```
+
+### 10.7 Verificación
+
+![show etherchannel summary en MS-DC](Images/Screenshot%202026-10-20%20at%2012.24.52%E2%80%AFPM.png)
+
+En MS-DC, Po1 y Po2 aparecen en (SU) con sus cuatro puertos en (P) negociados por LACP, y en la misma consola Vlan15, Vlan25 y Vlan35 cambian a up en interfaz y protocolo de línea.
 
 ## 11. Pruebas de conectividad y alta disponibilidad
 
@@ -383,13 +440,16 @@ Cada equipo final va en el puerto con su mismo número. Por ejemplo, BD1 va en F
 
 ### 11.2 Enrutamiento inter-VLAN por sede
 
-<!-- Pendiente (cada responsable): ping entre dos VLANs de su propia sede. -->
+![Pruebas de PDU en el Data Center](Images/Screenshot%202026-10-20%20at%2012.42.01%E2%80%AFPM.png)
+
+En el Data Center (Mariano), las seis pruebas de PDU terminaron en Successful: BD1 a BD7, WEB1 a WEB7 y NOC1 a NOC7 dentro de cada VLAN, BD1 a WEB1 entre VLANs en el mismo switch de acceso, y NOC1 a BD1 y NOC7 a WEB7 entre VLANs de switches de acceso distintos.
+
+<!-- Pendiente (Oscar y Luis): ping entre dos VLANs de su propia sede. -->
 
 ### 11.3 Conmutación por error
 
 <!-- Pendiente (Luis): apagar la interfaz de MS1 y mostrar con show standby que MS2 pasa a activo sin perder pings. -->
 <!-- Pendiente (Oscar): apagar un enlace del anillo de Norte y mostrar la reconvergencia con show spanning-tree. -->
-<!-- Pendiente (Mariano): apagar un enlace de un Port-channel del núcleo y mostrar con show etherchannel summary que el canal sigue arriba. -->
 
 ## 12. Estructura del repositorio
 
