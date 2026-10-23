@@ -26,11 +26,15 @@ Los IDs de VLAN se forman concatenando el número con Y. Con Y = 4, la VLAN 1Y e
 
 ## 3. Topología general
 
-La simulación unificada está en [Luis/BanTech_GT_v1.pkt](Luis/BanTech_GT_v1.pkt). La copia utilizada para pruebas de redundancia es [Luis/BanTech_GT_pruebas_redundancia_20261022.pkt](Luis/BanTech_GT_pruebas_redundancia_20261022.pkt).
+El **archivo maestro final** es [Unido/BanTech_GT_v1.pkt](Unido/BanTech_GT_v1.pkt). La [copia de prueba con el uplink de MS1 apagado](Unido/Prueba_HSRP_uplink_MS1_caido.pkt) conserva el escenario de conmutación corregido. Las copias de `Luis/`, `Mariano/` y `Oscar/` son históricas o parciales y no sustituyen al maestro de `Unido/`.
+
+Última corrección y pruebas: 23 de octubre de 2026. [Resultados, extractos de consola y procedimiento de reproducción](Unido/VERIFICACION_FINAL.md).
 
 La red revisada en Packet Tracer 9.0.1 contiene 112 dispositivos y 120 enlaces. El chequeo de salud no detectó enlaces caídos ni direcciones IP duplicadas.
 
-![Topología general unificada de BanTech GT](Images/Maestro.png)
+![Topología general final de BanTech GT](Unido/Topologia_final.png)
+
+Las cuatro sedes y el backbone están delimitados por dominio de enrutamiento. El fondo editable se conserva en [Unido/fondo_final.svg](Unido/fondo_final.svg). `Images/Maestro.png` es una captura histórica anterior al ordenamiento final.
 
 La red se divide en un backbone nacional y cuatro redes de borde. El backbone es un núcleo de tres switches de capa 3 que corre OSPF y sirve de punto de encuentro de todos los dominios de enrutamiento. Cada sede se conecta al núcleo por medio de su propio equipo de borde, y cada una pertenece a uno de los cuatro métodos de enrutamiento exigidos.
 
@@ -61,7 +65,7 @@ La redistribución se concentra en un solo equipo por cada par de dominios. Tene
 |---|---|---|---|---|
 | CORE-1 | 3650-24PS | Núcleo, enlace hacia Sede Central | OSPF | 1.1.1.1 |
 | CORE-2 | 3650-24PS | Núcleo, agrega WAN y Norte | OSPF | 2.2.2.2 |
-| CORE-3 | 3650-24PS | Núcleo y punto de redistribución hacia la red legada | OSPF y RIPv2 | 3.3.3.3 |
+| CORE-3 | 3650-24PS | Núcleo y punto de redistribución hacia la red legada | OSPF, RIPv2 y agregado estático de respaldo | 3.3.3.3 |
 | R-WAN | 2911 con HWIC-2T | Borde WAN y punto de redistribución hacia la expansión regional | OSPF y EIGRP 10 | 4.4.4.4 |
 | R-CENTRAL1 | 2911 | Punto de redistribución del segmento estático | OSPF y estáticas | 5.5.5.5 |
 | R-CENTRAL2 | 2911 | Router de acceso del Data Center | Estáticas | No aplica |
@@ -120,7 +124,11 @@ Las interfaces de los switches del núcleo hacia los equipos de borde se configu
 | CORE-3 | OSPF y RIPv2 | Redistribución mutua. Oriente aprende el resto de la red y el núcleo aprende las redes de Oriente |
 | R-CENTRAL1 | Estáticas hacia OSPF | Propaga la ruta estática del Data Center al núcleo sin exponer el segmento estático |
 
-Cada protocolo necesita un dato distinto al recibir rutas externas. OSPF requiere la palabra `subnets` para redistribuir redes con máscara distinta a la de su clase, y como todas las redes del proyecto son subredes de 10.0.0.0/8, sin ella no se redistribuiría ninguna. EIGRP y RIP requieren una métrica explícita, porque no saben traducir el costo de OSPF y sin ella anuncian las rutas como inalcanzables. En EIGRP, `1544 2000 255 1 1500` son ancho de banda en kbps (el de un T1), retardo en decenas de microsegundos, confiabilidad, carga y MTU. En RIP, `metric 2` asigna dos saltos y deja margen bajo el límite de 15.
+CORE-3 conserva además el agregado de respaldo `10.49.30.0/24`: vía MS2 (`10.49.0.38`, distancia 250) y una ruta estática flotante del mismo agregado vía MS1 (`10.49.0.34`, distancia 251). Se redistribuye en OSPF junto con RIP. Las rutas RIP `/25` y `/26` son más específicas y siguen siendo preferidas para las VLANs; la distancia administrativa no se compara entre prefijos de distinta longitud. El `/24` es un resumen de rutas, no una nueva subred asignada ni un cambio de las máscaras de los hosts.
+
+En Packet Tracer 9.0.1 se observó que retirar un miembro del ECMP RIP podía retirar el anuncio OSPF de las redes específicas aunque CORE-3 conservara el otro siguiente salto RIP. El agregado mantiene una ruta de retorno durante ese escenario. Si cae el enlace a MS2, el agregado usa la alternativa de distancia 251 por MS1. Se verificaron ambas fallas por separado, con resultados en la [verificación final](Unido/VERIFICACION_FINAL.md).
+
+Cada protocolo necesita un dato distinto al recibir rutas externas. OSPF requiere la palabra `subnets` para redistribuir redes con máscara distinta a la de su clase, y como todas las redes del proyecto son subredes de 10.0.0.0/8, sin ella no se redistribuiría ninguna. EIGRP y RIP requieren una métrica explícita, porque no saben traducir el costo de OSPF y sin ella anuncian las rutas como inalcanzables. En EIGRP, la configuración real `1544 200 255 1 1500` corresponde a ancho de banda en kbps, retardo en decenas de microsegundos, confiabilidad, carga y MTU. En RIP, `metric 2` asigna dos saltos y deja margen bajo el límite de 15.
 
 ```
 ! R-WAN
@@ -134,20 +142,21 @@ router ospf 1
 router eigrp 10
  network 10.49.0.24 0.0.0.3
  no auto-summary
- redistribute ospf 1 metric 1544 2000 255 1 1500
+  redistribute ospf 1 metric 1544 200 255 1 1500
 !
 ! CORE-3
+ip route 10.49.30.0 255.255.255.0 10.49.0.38 250
+ip route 10.49.30.0 255.255.255.0 10.49.0.34 251
 router ospf 1
  router-id 3.3.3.3
  network 10.49.0.4 0.0.0.3 area 0
  network 10.49.0.8 0.0.0.3 area 0
- redistribute rip subnets
+  redistribute rip subnets
+  redistribute static subnets
 router rip
  version 2
  no auto-summary
  network 10.0.0.0
- passive-interface Port-channel13
- passive-interface Port-channel23
  redistribute ospf 1 metric 2
 !
 ! R-CENTRAL1
@@ -429,7 +438,7 @@ Oriente contiene dos switches multicapa de distribución y dos switches de acces
 
 ### 9.1 Justificación de la arquitectura
 
-MS1 y MS2 son switches multicapa 3650-24PS unidos por Po12, un EtherChannel troncal LACP de dos cables. Cada switch de acceso tiene una troncal a MS1 y otra a MS2, de modo que puede seguir llegando al gateway cuando falla uno de los equipos de distribución. HSRP conserva las IPs virtuales de ambas VLANs: MS1 es el activo preferido (prioridad 110) y MS2 el respaldo (100), con preempt. Rapid PVST+ evita los bucles de los enlaces redundantes; MS1 es la raíz preferida para alinear el camino de capa 2 con el gateway activo. CORE-3 sigue siendo el punto común de salida hacia el backbone.
+MS1 y MS2 son switches multicapa 3650-24PS unidos por Po12, un EtherChannel troncal LACP de dos cables. Cada switch de acceso tiene una troncal a MS1 y otra a MS2, de modo que puede seguir llegando al gateway cuando falla uno de los equipos de distribución. HSRP conserva las IPs virtuales de ambas VLANs: MS1 es el activo preferido (prioridad 105) y MS2 el respaldo (100), con preempt. Ambos siguen Gi1/0/1 con decremento de 10: al perder su uplink, MS1 baja a 95 y MS2 asume el gateway. Rapid PVST+ evita los bucles; durante la falla de uplink el tráfico puede cruzar Po12 hasta el gateway activo en MS2. CORE-3 sigue siendo el punto común de salida hacia el backbone.
 
 ### 9.2 Mapeo lógico
 
@@ -461,13 +470,15 @@ interface range GigabitEthernet1/0/2 - 3
 interface Vlan84
  ip address 10.49.30.130 255.255.255.192
  standby 84 ip 10.49.30.129
- standby 84 priority 110
- standby 84 preempt
+  standby 84 priority 105
+  standby 84 preempt
+  standby 84 track GigabitEthernet1/0/1
 interface Vlan94
  ip address 10.49.30.2 255.255.255.128
  standby 94 ip 10.49.30.1
- standby 94 priority 110
- standby 94 preempt
+  standby 94 priority 105
+  standby 94 preempt
+  standby 94 track GigabitEthernet1/0/1
 router rip
  version 2
  no auto-summary
@@ -478,7 +489,7 @@ spanning-tree mode rapid-pvst
 spanning-tree vlan 84,94 priority 24576
 ```
 
-En MS2, Gi1/0/1 usa `10.49.0.38/30` y la prioridad STP es 28672. Los grupos HSRP 84 y 94 usan `preempt` en ambos equipos. Los puertos de acceso de los 2960 tienen PortFast y BPDU Guard.
+En MS2, Gi1/0/1 usa `10.49.0.38/30` y la prioridad STP es 28672. Los grupos HSRP 84 y 94 usan `preempt` y `track GigabitEthernet1/0/1` en ambos equipos. El simulador admite el decremento predeterminado de 10; la separación 105/100 garantiza que MS1 quede por debajo de MS2 al perder el uplink. Los puertos de acceso de los 2960 tienen PortFast y BPDU Guard.
 
 ### 9.4 Cableado e interfaces de Oriente
 
@@ -688,6 +699,12 @@ Las pruebas inter-VLAN de Occidente comprenden [Cajas a Asesores](Oscar/capturas
 
 ### 11.3 Conmutación por error
 
+**Prueba final corregida, 23/10/2026:** se apagó únicamente Gi1/0/1 de MS1. MS1 pasó a Standby con prioridad 95 y MS2 a Active con prioridad 100 en ambos grupos. Tras converger, PLAT1 → BD1, BOV1 → BD1 y BD1 → PLAT1 terminaron con 4/4 respuestas. Al restaurar solamente el uplink, MS1 recuperó Active con prioridad 105 mediante `preempt`, sin reiniciar puertos de acceso. También se probó la caída aislada del uplink de MS2: quedó Standby con prioridad 90, el agregado de CORE-3 cambió a la ruta de distancia 251 por MS1 y los pings de ambas VLANs a BD1 terminaron con 4/4. Estos resultados son posteriores a las capturas históricas siguientes. [Extractos de consola y procedimiento](Unido/VERIFICACION_FINAL.md).
+
+La [copia de prueba](Unido/Prueba_HSRP_uplink_MS1_caido.pkt) se entrega intencionalmente con Gi1/0/1 de MS1 en shutdown. El [maestro final](Unido/BanTech_GT_v1.pkt) se entrega con los dos uplinks restaurados.
+
+**Pruebas históricas del 22/10/2026:**
+
 En Oriente se apagó MS1 completo: MS2 pasó a Active en los grupos 84 y 94, y después de converger BOV7 a BD1 y PLAT1 a BOV1 terminaron con 4/4 respuestas. Se observaron pérdidas transitorias durante la conmutación. Al encender MS1, preempt le devolvió el rol activo y MS2 regresó a Standby. También se apagó un miembro de Po12: el canal permaneció SU con el otro miembro en P; después de pérdidas iniciales, el ping inter-VLAN terminó con 4/4 respuestas. Ambos equipos y enlaces quedaron restaurados. [Detalle de pruebas](Luis/README.md#verificaciones-reales).
 Evidencias de Oriente: [miembro de Po12 apagado](Luis/Images/05_Po12_Un_Miembro_Apagado.png), [MS2 activo](Luis/Images/08_MS2_Active_Con_MS1_Apagado.png), [pings con MS1 apagado](Luis/Images/10_Pings_Con_MS1_Apagado.png), [MS1 activo tras recuperar](Luis/Images/13_MS1_Active_Tras_Recuperacion.png) y [MS2 en espera](Luis/Images/14_MS2_Standby_Tras_Recuperacion.png). Las capturas de retorno incluyen recuperación tras reiniciar puertos y pings fallidos antes de recuperar la comunicación; no prueban una recuperación automática sin intervención en todos los casos.
 
@@ -699,10 +716,10 @@ La prueba local de redundancia de Norte consistió en apagar Fa0/24 de SW-N-ANAL
 |---|---|---|
 | Backbone | Triángulo OSPF y EtherChannel LACP de fibra | Camino alternativo entre los switches restantes y continuidad ante pérdida de un miembro del canal |
 | Norte | Rapid PVST+ y enlaces redundantes de acceso | Camino alternativo ante caída del enlace directo de un switch de acceso |
-| Oriente | HSRP, Rapid PVST+ y Po12 LACP | Respaldo del gateway ante caída completa de MS1 y continuidad del canal con un miembro activo |
+| Oriente | HSRP con seguimiento, Rapid PVST+, Po12 LACP y agregado de retorno en CORE-3 | Conmutación del gateway al perder el uplink y ruta de retorno desde el backbone; continuidad del canal con un miembro activo |
 | Data Center | EtherChannel LACP hacia acceso | Continuidad del enlace agregado mientras exista un miembro operativo |
 
-CORE-3 es el punto común de salida de Oriente. Los hosts tienen una única conexión a su switch de acceso. HSRP no tiene seguimiento del uplink: la caída aislada de Gi1/0/1 no reduce por sí sola la prioridad de MS1. Las pruebas de falla y recuperación incluyeron pérdidas transitorias; el retorno documentado también incluyó reinicio de puertos.
+CORE-3 es el punto común de salida de Oriente. Los hosts tienen una única conexión a su switch de acceso. HSRP ahora sigue el uplink en ambos equipos y se verificó la recuperación automática tras una falla aislada. No se afirma ausencia absoluta de pérdidas durante la transición: los resultados 4/4 corresponden a pings después de converger. Las capturas del 22/10 son históricas y sus reinicios de puertos no forman parte del procedimiento final corregido.
 
 ### 11.5 Secuencia de evidencias de Oriente
 
@@ -722,9 +739,16 @@ CORE-3 es el punto común de salida de Oriente. Los hosts tienen una única cone
 
 ```
 README.md                    manual técnico consolidado
+Unido/
+  BanTech_GT_v1.pkt          MAESTRO FINAL de todas las sedes
+  Prueba_HSRP_uplink_MS1_caido.pkt  escenario de falla corregido
+  CORE.conf                 extractos actuales de CORE-1, CORE-2 y CORE-3
+  VERIFICACION_FINAL.md      correcciones, consola y pruebas reproducibles
+  Topologia_final.png       captura real del canvas final
+  fondo_final.svg           fondo editable utilizado en el maestro
 Luis/
-  BanTech_GT_v1.pkt          maestro integrado de todas las sedes
-  BanTech_GT_pruebas_redundancia_20261022.pkt  copia para pruebas
+  BanTech_GT_v1.pkt          copia histórica de integración
+  BanTech_GT_pruebas_redundancia_20261022.pkt  pruebas históricas
   README.md                 Oriente, integración y evidencias
   TareasLuis.md              asignación original
   Config/                   configuraciones de los cuatro switches de Oriente
@@ -733,5 +757,6 @@ Mariano/                    .pkt parcial, .conf, manual y tareas de backbone/Cen
 Oscar/                      .pkt parcial, seccion.md y tareas de Occidente/Norte
   capturas/                 evidencias locales de ambas sedes
 Images/                     boceto y capturas históricas de backbone/Data Center
-Unido/                      copia de integración, CORE.conf y fondo_general.png
 ```
+
+Los `.conf` y `.pkt` parciales de `Mariano/` y `Oscar/` corresponden a entregas históricas. Para reproducir la corrección final de Oriente se utilizan `Luis/Config/MS1.conf`, `Luis/Config/MS2.conf` y el bloque CORE-3 de `Unido/CORE.conf`.
