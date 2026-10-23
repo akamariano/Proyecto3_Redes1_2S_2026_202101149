@@ -1,11 +1,12 @@
 # Sección técnica — Sede Occidente y Sede Norte
 
-**Proyecto:** BanTech GT — Redes de Computadoras 1 
+**Proyecto:** Proyecto 2, BanTech GT — Redes de Computadoras 1
 **Grupo:** 4  
+**Responsable:** Oscar Vladimir Nij Cruz, carné 202100076.
 
 
 
-Este documento presenta la configuración y las pruebas realizadas en las sedes Occidente y Norte. Ambas topologías se reunieron en un mismo archivo de Packet Tracer. Por el momento, cada sede funciona de forma independiente; las conexiones con el backbone se realizarán durante la integración del proyecto general.
+Este documento presenta la configuración y las pruebas locales realizadas en las sedes Occidente y Norte. El archivo parcial reúne ambas sedes de forma independiente. La integración con el backbone ya se realizó en el [maestro de Luis](../Luis/BanTech_GT_v1.pkt); las verificaciones entre sedes se consolidan en el [manual general](../README.md#111-convergencia-de-extremo-a-extremo). Las menciones a enlaces pendientes en los extractos siguientes describen el estado histórico del parcial.
 ## 1. Objetivo y decisiones de diseño
 
 La parte asignada consistió en implementar dos sedes con redes locales segmentadas por departamentos, capacidad de direccionamiento según VLSM y comunicación inter-VLAN a través de un router. Se adoptaron los parámetros del grupo `XX = 49`, `Y = 4`, dominio VTP `bantech49`, contraseña VTP `cisco` y bloque general de direccionamiento `10.49.0.0/16`.
@@ -64,7 +65,7 @@ Las subredes se eligieron para cubrir la capacidad de hosts solicitada para cada
 | Occidente → R-WAN | `R-Occidente Se0/3/0`: `10.49.0.26/30` | `R-WAN Se0/3/0`: `10.49.0.25/30` (DCE; `clock rate 64000`) | `10.49.0.24/30` | EIGRP 10 |
 | Norte → CORE-2 | `R-Norte Gi0/0`: `10.49.0.30/30` | `CORE-2 Gi1/0/2`: `10.49.0.29/30` | `10.49.0.28/30` | OSPF 1, área 0 |
 
-**Estado:** interfaces configuradas en las sedes, con enlace físico aún pendiente de conectar en el archivo maestro. `down/down` y ausencia de vecinos en el archivo parcial son condiciones esperadas antes del cableado.
+**Estado del parcial original:** interfaces configuradas y enlaces externos sin cable; por ello podían aparecer `down/down` y sin vecinos. En la integración revisada ambos enlaces ya están conectados.
 
 ## 4. VLANs, VTP, troncales y acceso
 
@@ -305,7 +306,7 @@ Se creó `BanTechGT_Sedes_Oscar_Grupo4.pkt`, se cerró y volvió a abrir, y se r
 
 ## 8. Integración con el proyecto general
 
-El archivo `BanTechGT_Sedes_Oscar_Grupo4.pkt` reúne las dos sedes y se encuentra en la carpeta `Oscar` de la rama `Oscar-Sedes-Occidente-Norte`. La configuración local y la comunicación entre VLANs se comprobaron antes y después de guardar el archivo. La integración con el backbone y las pruebas entre sedes corresponden a la siguiente etapa del trabajo en equipo.
+El archivo [BanTechGT_Sedes_Oscar_Grupo4.pkt](BanTechGT_Sedes_Oscar_Grupo4.pkt) reúne los parciales de ambas sedes. La configuración local y la comunicación entre VLANs se comprobaron antes y después de guardar el archivo. Ambas sedes ya están incorporadas al maestro de Luis; los resultados integrados se consultan en el manual general.
 
 ### 8.1 Conexiones previstas
 
@@ -316,12 +317,12 @@ El archivo `BanTechGT_Sedes_Oscar_Grupo4.pkt` reúne las dos sedes y se encuentr
 
 ### 8.2 Pruebas para la etapa de integración
 
-Una vez unidas las topologías al backbone, se comprobarán las vecindades EIGRP y OSPF, las rutas aprendidas y los pings desde Occidente y Norte hacia otras sedes y el Data Center. También se repetirá la prueba de recuperación de enlaces de Norte sobre una copia del proyecto integrado, tomando nuevas capturas para el manual general.
+En la revisión de la sesión integrada se comprobaron pings PC0 a BD1, PC0 a PC-A1 y PC-A1 a PLAT1, todos con 4/4 respuestas. La captura de BD1 hacia las tres sedes está enlazada en el manual general. Queda pendiente incorporar capturas actuales de vecindades y rutas, y repetir la recuperación STP de Norte sobre una copia del maestro.
 
-Los resultados de esas pruebas se agregarán al documento cuando se realicen. Las pruebas locales ya documentadas en las secciones anteriores no necesitan presentarse como pendientes.
+Las pruebas locales ya documentadas en las secciones anteriores se conservan como evidencia del parcial; no sustituyen las pruebas de falla sobre el maestro integrado.
 ## 9. Índice de evidencias y organización sugerida
 
-El ZIP de evidencias entregado contiene capturas numeradas de `01` a `62` (63 imágenes, porque existen dos archivos diferentes con prefijo `14_`). **Las capturas no vienen embebidas en este `.md` descargable**. Para que Luis pueda abrirlas desde el repositorio, conviene copiar los archivos de `capturas/` a una carpeta bajo `Oscar/capturas/` y conservar los nombres originales; luego vincular o incrustar en el README consolidado únicamente las imágenes que correspondan.
+Las capturas originales numeradas de `01` a `62` están disponibles en `Oscar/capturas/` y enlazadas en este documento. Existen dos archivos con prefijo `14_`. El manual consolidado incorpora evidencias representativas de cada bloque; las evidencias de redundancia de Oriente y retorno desde el Data Center están en `Luis/Images/`.
 
 | Bloque | Capturas | Comandos y comprobaciones |
 |---|---|---|
