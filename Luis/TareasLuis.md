@@ -1,5 +1,7 @@
 # Tareas de Luis, Proyecto 2 BanTech GT
 
+Asignación original y calendario de planificación. El estado actualizado y las evidencias están en [README.md](README.md).
+
 Rol: Sede Oriente, integración del .pkt maestro y del manual técnico.
 
 Eres quien une todo. Mariano y Oscar te entregan sus sedes ya configuradas, incluyendo el enrutamiento hacia el backbone, y tú las fusionas en el .pkt maestro, consolidas el README.md y aplicas cualquier corrección que te manden. Eres el único que edita esos dos archivos, para que nunca existan dos versiones distintas del maestro.
@@ -48,12 +50,12 @@ Total aproximado: 19.5 horas.
 Solo tú editas el .pkt maestro y el README.md. Cuando Mariano u Oscar encuentren un error después de la fusión, te mandan los comandos exactos y el equipo, tú los aplicas y vuelves a publicar el maestro con un commit que diga qué cambió. Las pruebas de falla de los demás se hacen sobre copias del maestro.
 
 ```
-README.md                    Luis
-BanTech_GT.pkt               Luis
-sedes/backbone-central/      Mariano
-sedes/occidente-norte/       Oscar
-sedes/oriente/               Luis (.pkt parcial, configs, seccion.md)
-img/                         una carpeta de capturas por sede
+README.md                    Luis (manual consolidado, raíz del repositorio)
+Unido/BanTech_GT_v1.pkt      Luis (maestro final; ubicación de entrega actual)
+Mariano/                    Mariano (backbone y Central)
+Oscar/                      Oscar (Occidente y Norte, seccion.md y capturas/)
+Luis/                       Luis (Oriente, README.md, Config/ e Images/)
+Images/                     capturas generales e históricas
 ```
 
 Pide que las capturas vengan nombradas con el equipo y el comando, por ejemplo MS1_show-standby.png, así las enlazas en el README sin tener que abrirlas una por una.

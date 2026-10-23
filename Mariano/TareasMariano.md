@@ -1,5 +1,7 @@
 # Tareas de Mariano, Proyecto 2 BanTech GT
 
+Asignación original y calendario de planificación. El estado actualizado está en el [manual general](../README.md).
+
 Rol: coordinador, backbone y Data Center con Sede Central.
 
 Tu trabajo es el núcleo de la red y el segmento de rutas estáticas. Como Luis es quien une todo en el .pkt maestro, tu entrega tiene que llegarle con la redistribución ya configurada, de modo que al conectar las sedes la red converja sin que él tenga que tocar el backbone.
@@ -42,12 +44,12 @@ Total aproximado: 17 horas.
 Luis es el único que edita el .pkt maestro y el README.md. Si encuentras un error en el backbone después del domingo, no edites el maestro. Mándale a Luis los comandos exactos y el equipo donde van, y él los aplica. Tus commits van solo dentro de tu carpeta.
 
 ```
-README.md                    Luis
-BanTech_GT.pkt               Luis
-sedes/backbone-central/      Mariano (.pkt parcial, configs, seccion.md)
-sedes/occidente-norte/       Oscar
-sedes/oriente/               Luis
-img/backbone-central/        capturas de Mariano
+README.md                    Luis (manual consolidado)
+Unido/BanTech_GT_v1.pkt      Luis (maestro final; ubicación de entrega actual)
+Mariano/                    Mariano (.pkt parcial, .conf y README.md)
+Oscar/                      Oscar (Occidente y Norte)
+Luis/                       Luis (Oriente, integración y evidencias)
+Images/                     capturas históricas de backbone y Data Center
 ```
 
 Nombra las capturas con el equipo y el comando, por ejemplo R-Central1_show-ip-route.png, para que Luis las ubique sin preguntar.

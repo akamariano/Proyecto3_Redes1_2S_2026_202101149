@@ -1,5 +1,7 @@
 # Tareas de Oscar, Proyecto 2 BanTech GT
 
+Asignación original y calendario de planificación. El estado actualizado está en el [manual general](../README.md).
+
 Rol: Sede Occidente y Sede Norte.
 
 Tus dos sedes son de capa 2 y se pueden construir sin depender del backbone. Como Luis es quien une todo en el .pkt maestro, tu entrega tiene que llegarle con los routers de borde ya configurados con su protocolo de enrutamiento y las direcciones del plan de Mariano, de modo que al conectarlos al núcleo la sede aparezca sola en las tablas de rutas.
@@ -41,12 +43,12 @@ Total aproximado: 16 horas.
 Luis es el único que edita el .pkt maestro y el README.md. Las pruebas de falla del lunes se hacen sobre una copia del maestro, nunca sobre el original. Si encuentras un error en tus sedes después del domingo, mándale a Luis los comandos exactos y el equipo donde van, y él los aplica. Tus commits van solo dentro de tu carpeta.
 
 ```
-README.md                    Luis
-BanTech_GT.pkt               Luis
-sedes/backbone-central/      Mariano
-sedes/occidente-norte/       Oscar (.pkt parcial, configs, seccion.md)
-sedes/oriente/               Luis
-img/occidente-norte/         capturas de Oscar
+README.md                    Luis (manual consolidado)
+Unido/BanTech_GT_v1.pkt      Luis (maestro final; ubicación de entrega actual)
+Mariano/                    Mariano (backbone y Central)
+Oscar/                      Oscar (.pkt parcial y seccion.md)
+Luis/                       Luis (Oriente e integración)
+Oscar/capturas/             capturas locales de Occidente y Norte
 ```
 
 Nombra las capturas con el equipo y el comando, por ejemplo SW-N-ROOT_show-spanning-tree.png, para que Luis las ubique sin preguntar.

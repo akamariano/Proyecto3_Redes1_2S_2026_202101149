@@ -1,5 +1,7 @@
 # Registro de validación del maestro BanTech GT
 
+> **Registro histórico:** este documento conserva la revisión anterior a las correcciones integradas desde `feature/sede-oriente`. Sus incidencias y pendientes describen aquella sesión, no el estado de la entrega final. Para el maestro corregido, los uplinks restaurados y las pruebas posteriores, consultar [VERIFICACION_FINAL.md](VERIFICACION_FINAL.md) y el [manual actualizado](../README.md). El maestro ya está incorporado en `Unido/BanTech_GT_v1.pkt`.
+
 [← Manual técnico](../README.md) · [Pendientes de entrega](#7-evidencias-por-incorporar-a-la-entrega)
 
 | Sesión de revisión | Packet Tracer | Dispositivos | Enlaces |
