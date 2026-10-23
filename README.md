@@ -288,22 +288,46 @@ Los IDs se forman con Y = 4. Los nombres van sin tilde para evitar problemas en 
 
 <!-- Responsable: Luis -->
 
-![Topología de Oriente](img/oriente/topologia_oriente.png)
+![Backbone, Data Center y Oriente integrados](Images/oriente-backbone-integrado.png)
+
+La implementación de Oriente, su cableado, IPs de los 14 hosts y las verificaciones están en [Luis/README.md](Luis/README.md). El archivo integrado en progreso es [Unido/BanTech_GT_v1.pkt](Unido/BanTech_GT_v1.pkt); todavía falta incorporar Occidente y Norte.
 
 ### 9.1 Justificación de la arquitectura
 
-<!-- Pendiente (Luis): por qué MS1 y MS2 en cascada, por qué el acceso se conecta a ambos y cómo HSRP mantiene el gateway si MS1 pierde energía. -->
+MS1 y MS2 son switches multicapa 3650-24PS unidos por Po12, un EtherChannel troncal LACP de dos cables. Cada switch de acceso tiene una troncal a MS1 y otra a MS2, de modo que puede seguir llegando al gateway cuando falla uno de los equipos de distribución. HSRP conserva las IPs virtuales de ambas VLANs: MS1 es el activo preferido (prioridad 110) y MS2 el respaldo (100), con preempt. Rapid PVST+ evita los bucles de los enlaces redundantes; MS1 es la raíz preferida para alinear el camino de capa 2 con el gateway activo. CORE-3 sigue siendo el punto común de salida hacia el backbone.
 
 ### 9.2 Mapeo lógico
 
 | Equipo | Función | Enlaces troncales 802.1Q | Puertos de acceso |
 |---|---|---|---|
-| MS1 | Distribución, HSRP activo (prioridad mayor, preempt) | | |
-| MS2 | Distribución, HSRP en espera | | |
+| MS1 | Distribución, HSRP activo preferido; RIPv2 | Po12 (Gi1/0/2-3), Gi1/0/4-5; VLANs 84,94 | Ninguno; Gi1/0/1 ruteado hacia CORE-3 |
+| MS2 | Distribución, HSRP en espera; RIPv2 | Po12 (Gi1/0/2-3), Gi1/0/4-5; VLANs 84,94 | Ninguno; Gi1/0/1 ruteado hacia CORE-3 |
+| SW-E-ACC1 | Acceso de Plataforma | Gi0/1 a MS1, Gi0/2 a MS2; VLANs 84,94 | Fa0/1-7, VLAN 94, PLAT1-7 |
+| SW-E-ACC2 | Acceso de Bóveda | Gi0/1 a MS1, Gi0/2 a MS2; VLANs 84,94 | Fa0/1-7, VLAN 84, BOV1-7 |
 
 ### 9.3 Extractos de configuración
 
-<!-- Pendiente (Luis): SVIs con standby, prioridad y preempt, y RIPv2. -->
+Los cuatro switches usan VTP transparente. Configuraciones: [MS1](Luis/MS1.conf), [MS2](Luis/MS2.conf), [SW-E-ACC1](Luis/SW-E-ACC1.conf) y [SW-E-ACC2](Luis/SW-E-ACC2.conf).
+
+```ios
+! MS1; MS2 usa .131 en Vlan84, .3 en Vlan94 y prioridad 100
+interface Vlan84
+ ip address 10.49.30.130 255.255.255.192
+ standby 84 ip 10.49.30.129
+ standby 84 priority 110
+ standby 84 preempt
+interface Vlan94
+ ip address 10.49.30.2 255.255.255.128
+ standby 94 ip 10.49.30.1
+ standby 94 priority 110
+ standby 94 preempt
+router rip
+ version 2
+ no auto-summary
+ network 10.0.0.0
+ passive-interface Vlan84
+ passive-interface Vlan94
+```
 
 ## 10. Data Center y Sede Central
 
@@ -433,10 +457,10 @@ En MS-DC, Po1 y Po2 aparecen en (SU) con sus cuatro puertos en (P) negociados po
 |---|---|---|---|
 | PC de Occidente | Servidor del Data Center | | |
 | PC de Norte | PC de Oriente | | |
-| PC de Oriente | Servidor del Data Center | | |
+| PLAT1 (Oriente) | BD1, 10.49.40.34 | 4/4 respuestas, 0% pérdida en la repetición estable | [Registro](Luis/README.md#verificaciones-reales) |
 | PC de Occidente | PC de Norte | | |
 
-<!-- Pendiente (Luis): matriz completa de pings entre sedes. -->
+Además, BOV1 a WEB1 y BD1 a PLAT1 terminaron con 4/4 respuestas. La matriz completa entre sedes queda pendiente de incorporar Occidente y Norte.
 
 ### 11.2 Enrutamiento inter-VLAN por sede
 
@@ -444,11 +468,11 @@ En MS-DC, Po1 y Po2 aparecen en (SU) con sus cuatro puertos en (P) negociados po
 
 En el Data Center (Mariano), las seis pruebas de PDU terminaron en Successful: BD1 a BD7, WEB1 a WEB7 y NOC1 a NOC7 dentro de cada VLAN, BD1 a WEB1 entre VLANs en el mismo switch de acceso, y NOC1 a BD1 y NOC7 a WEB7 entre VLANs de switches de acceso distintos.
 
-<!-- Pendiente (Oscar y Luis): ping entre dos VLANs de su propia sede. -->
+En Oriente, PLAT7 (VLAN 94) a BOV7 (VLAN 84) terminó con 4/4 respuestas. Pendiente: las pruebas inter-VLAN de Occidente y Norte.
 
 ### 11.3 Conmutación por error
 
-<!-- Pendiente (Luis): apagar la interfaz de MS1 y mostrar con show standby que MS2 pasa a activo sin perder pings. -->
+En Oriente se apagó MS1 completo: MS2 pasó a Active en los grupos 84 y 94, y después de converger BOV7 a BD1 y PLAT1 a BOV1 terminaron con 4/4 respuestas. Se observaron pérdidas transitorias durante la conmutación. Al encender MS1, preempt le devolvió el rol activo y MS2 regresó a Standby. También se apagó un miembro de Po12: el canal permaneció SU con el otro miembro en P; después de pérdidas iniciales, el ping inter-VLAN terminó con 4/4 respuestas. Ambos equipos y enlaces quedaron restaurados. [Detalle de pruebas](Luis/README.md#verificaciones-reales).
 <!-- Pendiente (Oscar): apagar un enlace del anillo de Norte y mostrar la reconvergencia con show spanning-tree. -->
 
 ## 12. Estructura del repositorio
