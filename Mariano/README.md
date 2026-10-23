@@ -2,7 +2,7 @@
 
 Redes de Computadoras 1, Proyecto 2, BanTech GT. Grupo 4.
 
-Responsable: Mariano Roberto Rac Noguera, carné 202101149, coordinador del grupo. Este documento detalla la parte del proyecto que diseñé, configuré y probé. El manual consolidado del grupo está en el [README de la raíz](../README.md).
+Responsable: Mariano Roberto Rac Noguera, carné 202101149, coordinador del grupo. Este documento detalla la parte del proyecto que diseñé, configuré y probé. El manual consolidado del grupo está en el [README de la raíz](../README.md). Las referencias a cableado durante la fusión describen la entrega parcial original; las cuatro sedes ya se encuentran integradas en el maestro de Luis.
 
 ## 1. Resumen de la responsabilidad
 
@@ -329,7 +329,7 @@ Como RIP declara redes con clase, `network 10.0.0.0` activa RIP en todas las int
 
 ### 6.4 R-WAN
 
-Fuente: [R-WAN.conf](R-WAN.conf). El archivo todavía nombra la interfaz serial como Serial0/0/0, pero en el .pkt el HWIC-2T está en la ranura 3 y la interfaz real es Serial0/3/0, que es la que se muestra aquí.
+Fuente: [R-WAN.conf](R-WAN.conf). El archivo usa Serial0/3/0, correspondiente al HWIC-2T instalado en la ranura 3 del .pkt.
 
 ```
 hostname R-WAN
