@@ -51,7 +51,7 @@ Solo tú editas el .pkt maestro y el README.md. Cuando Mariano u Oscar encuentre
 
 ```
 README.md                    Luis (manual consolidado, raíz del repositorio)
-Luis/BanTech_GT_v1.pkt       Luis (maestro integrado)
+Unido/BanTech_GT_v1.pkt      Luis (maestro final; ubicación de entrega actual)
 Mariano/                    Mariano (backbone y Central)
 Oscar/                      Oscar (Occidente y Norte, seccion.md y capturas/)
 Luis/                       Luis (Oriente, README.md, Config/ e Images/)

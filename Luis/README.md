@@ -4,7 +4,7 @@ Redes de Computadoras 1, Proyecto 2, BanTech GT. Grupo 4.
 
 Responsable: Luis Pablo Carlos Tapia, carné 202203257. Implementación inicial: 20 de octubre de 2026. Evidencias de redundancia y revisión de integración: 22 de octubre de 2026.
 
-El maestro [BanTech_GT_v1.pkt](BanTech_GT_v1.pkt) reúne el backbone, Central y Data Center de Mariano, Occidente y Norte de Oscar, y Oriente. Las pruebas de falla se conservan en [BanTech_GT_pruebas_redundancia_20261022.pkt](BanTech_GT_pruebas_redundancia_20261022.pkt). El [manual general](../README.md) consolida el direccionamiento, las secciones por sede y la matriz de conectividad.
+El maestro final [Unido/BanTech_GT_v1.pkt](../Unido/BanTech_GT_v1.pkt) reúne todas las sedes. Las copias `.pkt` de esta carpeta son históricas. La [prueba corregida de caída del uplink de MS1](../Unido/Prueba_HSRP_uplink_MS1_caido.pkt) y la [verificación final del 23/10/2026](../Unido/VERIFICACION_FINAL.md) se conservan en `Unido/`. El [manual general](../README.md) consolida el diseño y los resultados actuales.
 
 La sesión revisada en Packet Tracer 9.0.1 contenía 112 dispositivos y 120 enlaces, sin enlaces caídos ni IPs duplicadas, y se identificó como `Unido/BanTech_GT_v1.pkt`. Las verificaciones por consola describen esa sesión; no comparan las copias guardadas de `Luis/` y `Unido/`.
 
@@ -12,15 +12,15 @@ La sesión revisada en Packet Tracer 9.0.1 contenía 112 dispositivos y 120 enla
 
 ![Etapa inicial: backbone, Data Center y Oriente](../Images/oriente-backbone-integrado.png)
 
-La imagen anterior corresponde a la etapa previa a incorporar Occidente y Norte. La [topología durante la caída de MS1](Images/09_Topologia_MS1_Apagado.png) pertenece a las pruebas de redundancia; falta una captura general del maestro en estado estable.
+La imagen anterior es histórica. La [captura general final](../Unido/Topologia_final.png) muestra las cuatro sedes y el backbone ordenados y delimitados por protocolo. La [topología durante la caída de MS1](Images/09_Topologia_MS1_Apagado.png) corresponde a las pruebas históricas del 22/10.
 
 MS1 y MS2 son switches multicapa 3650-24PS, cada uno con una fuente `AC-POWER-SUPPLY` en la ranura interna `2/4`. Ambos realizan enrutamiento inter-VLAN y se unen mediante un EtherChannel troncal LACP de dos cables (Po12). SW-E-ACC1 y SW-E-ACC2 son 2960-24TT y tienen un enlace troncal hacia cada equipo de distribución. Cada switch de acceso conecta siete PCs.
 
-HSRP mantiene gateways virtuales estables para los hosts. MS1 tiene prioridad 110 y MS2 prioridad 100; ambos usan `preempt`. Rapid PVST+ evita los bucles de capa 2 de los enlaces redundantes. MS1 tiene prioridad STP 24576 para las dos VLANs y MS2 28672, alineando el gateway activo y la raíz preferida. Los puertos hacia PCs usan PortFast y BPDU Guard.
+HSRP mantiene gateways virtuales estables para los hosts. MS1 tiene prioridad 105 y MS2 prioridad 100; ambos usan `preempt` y siguen Gi1/0/1 con decremento 10. Si falla el uplink de MS1, su prioridad baja a 95 y MS2 asume ambos grupos. Rapid PVST+ evita los bucles de capa 2. MS1 tiene prioridad STP 24576 y MS2 28672. Los puertos hacia PCs usan PortFast y BPDU Guard.
 
-Oriente se integra con CORE-3 mediante RIPv2 y dos enlaces ruteados independientes. CORE-3 realiza la redistribución hacia OSPF. No se añadieron rutas estáticas en Oriente. Las SVIs son pasivas en RIP: sus redes se anuncian por los enlaces ruteados sin enviar actualizaciones a los hosts. Los cuatro switches usan VTP transparente y definen las VLANs localmente.
+Oriente se integra con CORE-3 mediante RIPv2 y dos enlaces ruteados independientes. CORE-3 redistribuye RIP hacia OSPF y conserva un agregado estático de respaldo `10.49.30.0/24`, preferido vía MS2 con distancia 250 y alternativo vía MS1 con distancia 251. El agregado conserva el retorno OSPF durante la falla; las rutas específicas de ambas VLANs siguen aprendidas por RIP. MS1 y MS2 no tienen rutas estáticas. Sus SVIs son pasivas en RIP. Los cuatro switches usan VTP transparente y definen las VLANs localmente.
 
-La redundancia cubre un equipo de distribución o un miembro de Po12. CORE-3 sigue siendo el punto común de salida de Oriente; cada PC tiene una única conexión a su switch de acceso.
+La redundancia incluye la caída aislada del uplink de cualquiera de los equipos de distribución, además de los caminos físicos alternativos y Po12. CORE-3 sigue siendo el punto común de salida de Oriente; cada PC tiene una única conexión a su switch de acceso.
 
 ## VLANs e interfaces
 
@@ -74,6 +74,12 @@ Son comandos de configuración para pegar en la CLI IOS. Durante la automatizaci
 
 ## Verificaciones reales
 
+### Corrección final: caída aislada del uplink, 23/10/2026
+
+Con Gi1/0/1 de MS1 en `shutdown`, MS1 quedó Standby con prioridad 95 y MS2 Active con prioridad 100. PLAT1 → BD1, BOV1 → BD1 y BD1 → PLAT1 terminaron con 4/4 respuestas después de converger. Se restauró solamente el uplink: MS1 volvió a Active con prioridad 105 sin reiniciar puertos de acceso. También se verificó el uplink de MS2 caído: prioridad 90, agregado de CORE-3 vía MS1 con distancia 251 y pings 4/4 desde ambas VLANs hacia BD1.
+
+El [registro de verificación final](../Unido/VERIFICACION_FINAL.md) contiene extractos reales y los comandos para reproducir la prueba. Los apartados siguientes conservan las evidencias históricas del 22/10; no describen la configuración HSRP actual.
+
 ### Estado estable
 
 `show standby brief` mostró MS1 Active y MS2 Standby en los grupos 84 y 94, con las IPs virtuales 10.49.30.129 y 10.49.30.1. MS1 reconoció como standby 10.49.30.131 y 10.49.30.3 respectivamente.
@@ -115,7 +121,7 @@ Se encendió MS1, se verificó su retorno a Active mediante `preempt` y el retor
 
 Se aplicó `shutdown` a Gi1/0/2 de MS1. Po12 permaneció `SU`, con Gi1/0/2(D) y Gi1/0/3(P). PLAT7 → BOV7 tuvo inicialmente 2/4 respuestas y después 4/4. Se restauró la interfaz con `no shutdown`.
 
-Estas pruebas validan la falla completa del switch y la de un miembro del canal. No se configuró seguimiento del uplink para HSRP: la caída aislada de Gi1/0/1 no reduce por sí sola la prioridad del grupo.
+Estas pruebas históricas corresponden al apagado completo y a un miembro del canal, antes de añadir seguimiento HSRP. La prueba actual de uplink y su recuperación automática se documentan arriba y sustituyen esa limitación del diseño anterior.
 
 ## Conectividad del proyecto integrado
 
@@ -138,7 +144,7 @@ La matriz registra pruebas representativas, no todas las combinaciones de hosts 
 
 ## Evidencias de redundancia
 
-Las evidencias están en `Luis/Images/` (nombre real de la carpeta en el repositorio).
+Las capturas históricas están en `Luis/Images/`. La captura general y los resultados de la corrección final están en `Unido/`.
 
 | Etapa | Capturas |
 |---|---|

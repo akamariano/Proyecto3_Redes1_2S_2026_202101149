@@ -25,7 +25,8 @@ Estos archivos son comandos IOS para configurar los cuatro switches de Oriente. 
 | Gi1/0/1 hacia CORE-3 | 10.49.0.34/30 | 10.49.0.38/30 |
 | VLAN 84, IP real | 10.49.30.130/26 | 10.49.30.131/26 |
 | VLAN 94, IP real | 10.49.30.2/25 | 10.49.30.3/25 |
-| Prioridad HSRP, grupos 84 y 94 | 110 | 100 |
+| Prioridad HSRP, grupos 84 y 94 | 105 | 100 |
+| Interfaz seguida / decremento | Gi1/0/1 / 10 | Gi1/0/1 / 10 |
 | Preempt | Sí | Sí |
 | Prioridad STP, VLANs 84 y 94 | 24576 | 28672 |
 | Po12 | Gi1/0/2 y Gi1/0/3 | Gi1/0/2 y Gi1/0/3 |
@@ -60,4 +61,6 @@ En estado estable se espera MS1 Active y MS2 Standby en ambos grupos, Po12 `SU` 
 
 Pruebas de host: PLAT7 a BOV7 (`10.49.30.138`), PLAT7 a BD1 (`10.49.40.34`) y retorno desde BD1 a PLAT7 (`10.49.30.10`). Los resultados y las [evidencias](../README.md#evidencias-de-redundancia) están documentados en el README.
 
-No se configura seguimiento del uplink en HSRP. La caída aislada de Gi1/0/1 no reduce la prioridad de MS1. Las pruebas documentadas cubren el apagado completo de MS1 y la caída de un miembro de Po12; hubo pérdidas transitorias y recuperación con intervención sobre puertos en la secuencia de retorno.
+Se configura `standby <grupo> track GigabitEthernet1/0/1` en ambos equipos. Packet Tracer 9.0.1 aplica un decremento de 10 y no acepta el decremento explícito en esa sintaxis. Por eso MS1 usa 105: al caer su uplink baja a 95 y MS2, con 100 y `preempt`, asume ambos gateways. Al restaurarlo, MS1 vuelve a 105 y recupera el rol activo automáticamente.
+
+La corrección completa incluye el agregado de respaldo de CORE-3 descrito en [Unido/CORE.conf](../../Unido/CORE.conf). Mantiene el anuncio de retorno en OSPF cuando el simulador retira las rutas específicas redistribuidas al perder un miembro del ECMP RIP. Las rutas específicas de usuarios siguen aprendidas por RIPv2. Resultados y procedimiento reproducible: [verificación final](../../Unido/VERIFICACION_FINAL.md).
