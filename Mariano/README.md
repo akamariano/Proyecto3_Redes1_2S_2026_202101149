@@ -2,7 +2,7 @@
 
 Redes de Computadoras 1, Proyecto 2, BanTech GT. Grupo 4.
 
-Responsable: Mariano Roberto Rac Noguera, carné 202101149, coordinador del grupo. Este documento detalla la parte del proyecto que diseñé, configuré y probé. El manual consolidado del grupo está en el [README de la raíz](../README.md). Las referencias a cableado durante la fusión describen la entrega parcial original; las cuatro sedes ya se encuentran integradas en el maestro de Luis.
+Responsable: Mariano Roberto Rac Noguera, carné 202101149, coordinador del grupo. Este documento detalla la parte del proyecto que diseñé, configuré y probé. El manual consolidado está en el [README de la raíz](../README.md) y el maestro final en [Unido/BanTech_GT_v1.pkt](../Unido/BanTech_GT_v1.pkt). Los `.conf` y el `.pkt` de esta carpeta conservan la entrega parcial histórica; los extractos actuales del núcleo y las correcciones del 23/10 están en [Unido/CORE.conf](../Unido/CORE.conf) y en la [verificación final](../Unido/VERIFICACION_FINAL.md).
 
 ## 1. Resumen de la responsabilidad
 
@@ -320,12 +320,10 @@ router rip
  version 2
  no auto-summary
  network 10.0.0.0
- passive-interface Port-channel13
- passive-interface Port-channel23
  redistribute ospf 1 metric 2
 ```
 
-Como RIP declara redes con clase, `network 10.0.0.0` activa RIP en todas las interfaces de CORE-3. Los `passive-interface` sobre Po13 y Po23 evitan que se envíen actualizaciones RIP hacia el núcleo, donde solo debe hablar OSPF.
+Como RIP declara redes con clase, `network 10.0.0.0` activa RIP en las interfaces del bloque 10.0.0.0/8. Las líneas `passive-interface Port-channel` de las plantillas históricas no forman parte de la configuración real verificada: esa sintaxis no fue aceptada por el IOS simulado del 3650. Los vecinos de enrutamiento del núcleo utilizan OSPF. El maestro añade en CORE-3 el agregado de retorno de Oriente de distancia 250/251 y `redistribute static subnets`, detallados en `Unido/CORE.conf`.
 
 ### 6.4 R-WAN
 
@@ -351,7 +349,7 @@ router ospf 1
 router eigrp 10
  network 10.49.0.24 0.0.0.3
  no auto-summary
- redistribute ospf 1 metric 1544 2000 255 1 1500
+  redistribute ospf 1 metric 1544 200 255 1 1500
 ```
 
 ### 6.5 R-CENTRAL1
@@ -520,7 +518,7 @@ Cada protocolo necesita un dato distinto para aceptar rutas que vienen de otro d
 
 En OSPF, `redistribute ... subnets` hace que se redistribuyan también las redes que no coinciden con su máscara de clase. Sin esa palabra, OSPF solo toma redes con clase completa, y como todas las redes del proyecto son subredes de 10.0.0.0/8 (por ejemplo 10.49.40.0/24), no se redistribuiría ninguna. Las rutas redistribuidas entran como externas de tipo 2 (O E2) con la métrica semilla por defecto de 20, que no aumenta al atravesar el núcleo. Por eso CORE-1 ve el Data Center como `O E2 10.49.40.0 [110/20]`.
 
-En EIGRP, `metric 1544 2000 255 1 1500` define la métrica semilla de las rutas que vienen de OSPF. Los cinco valores son el ancho de banda en kbps (1544, el de un enlace T1, coherente con el serial WAN), el retardo en decenas de microsegundos (2000), la confiabilidad (255 de 255, enlace totalmente confiable), la carga (1 de 255, enlace casi vacío) y la MTU (1500 bytes). EIGRP no sabe traducir el costo de OSPF a su métrica compuesta, y sin una métrica explícita las rutas redistribuidas quedan con métrica infinita y R-Occidente no las instala.
+En EIGRP, la configuración real de R-WAN usa `metric 1544 200 255 1 1500` como métrica semilla de las rutas que vienen de OSPF. Los cinco valores son ancho de banda en kbps (1544), retardo en decenas de microsegundos (200), confiabilidad (255), carga (1) y MTU (1500 bytes). El valor 2000 de la plantilla parcial no coincide con el maestro. EIGRP necesita una métrica semilla válida para instalar las rutas redistribuidas.
 
 En RIP, `metric 2` asigna dos saltos a las rutas que vienen de OSPF. RIP tampoco puede traducir el costo de OSPF, y sin métrica explícita las rutas se anuncian como inalcanzables. Un valor bajo deja margen para que MS1 y MS2 las propaguen dentro de Oriente sin acercarse al límite de 15 saltos.
 

@@ -44,7 +44,7 @@ Luis es el único que edita el .pkt maestro y el README.md. Las pruebas de falla
 
 ```
 README.md                    Luis (manual consolidado)
-Luis/BanTech_GT_v1.pkt       Luis (maestro integrado)
+Unido/BanTech_GT_v1.pkt      Luis (maestro final; ubicación de entrega actual)
 Mariano/                    Mariano (backbone y Central)
 Oscar/                      Oscar (.pkt parcial y seccion.md)
 Luis/                       Luis (Oriente e integración)
