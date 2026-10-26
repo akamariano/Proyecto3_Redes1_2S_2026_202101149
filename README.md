@@ -10,6 +10,8 @@ Universidad de San Carlos de Guatemala · Facultad de Ingeniería · Escuela de 
 
 Este manual describe la infraestructura unificada de BanTech GT: backbone nacional, sedes Occidente, Norte y Oriente, y Data Center con Sede Central. Incluye el diseño físico y lógico, el direccionamiento, las configuraciones relevantes y las pruebas de conectividad y alta disponibilidad.
 
+> **Cómo probarlo.** Abre [Unido/BanTech_GT_v1.pkt](Unido/BanTech_GT_v1.pkt) en Cisco Packet Tracer 9.0.1 o superior (gratis con una cuenta de [Cisco Networking Academy](https://www.netacad.com/resources/lab-downloads)). En CORE-1, CORE-2 o CORE-3 revisa `show ip route`, `show ip ospf neighbor` y `show etherchannel summary`; en MS1 y MS2 de Oriente, `show standby brief`. Haz `ping` desde una PC de cualquier sede hacia los servidores del Data Center. Para ver la alta disponibilidad, apaga el uplink de MS1 (`interface Gi1/0/1`, `shutdown`) y repite el ping: MS2 toma el gateway. El procedimiento completo y los resultados esperados están en la [verificación final](Unido/VERIFICACION_FINAL.md#6-cómo-reproducir-la-prueba).
+
 **Entrega:** [maestro final](Unido/BanTech_GT_v1.pkt) · [verificación final](Unido/VERIFICACION_FINAL.md) · [registro histórico de revisión](Unido/VALIDACION.md).
 
 ## Contenido
